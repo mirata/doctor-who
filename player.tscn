@@ -1,0 +1,144 @@
+[gd_scene format=3 uid="uid://cvxl5px3s68rl"]
+
+[ext_resource type="Texture2D" uid="uid://73i8kyjnof7a" path="res://Warrior_Blue.png" id="1_4flbx"]
+[ext_resource type="Script" uid="uid://bu6infk68sg7v" path="res://player.gd" id="1_onrkg"]
+[ext_resource type="Texture2D" uid="uid://cakxfx6u2sd7c" path="res://low.png" id="2_i3pqv"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
+radius = 25.0
+
+[sub_resource type="Animation" id="Animation_onrkg"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("WarriorBlue:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Animation_i3pqv"]
+resource_name = "idle"
+length = 0.4
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(),
+"transitions": PackedFloat32Array(),
+"update": 1,
+"values": []
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("WarriorBlue:frame")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [0, 1, 2, 3, 4, 5]
+}
+
+[sub_resource type="Animation" id="Animation_hqtel"]
+resource_name = "run"
+length = 0.4
+loop_mode = 1
+step = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("WarriorBlue:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3, 0.4, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 1,
+"values": [6, 7, 8, 9, 10, 11]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_hqtel"]
+_data = {
+&"RESET": SubResource("Animation_onrkg"),
+&"idle": SubResource("Animation_i3pqv"),
+&"run": SubResource("Animation_hqtel")
+}
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_onrkg"]
+animation = &"idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_i3pqv"]
+animation = &"run"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_hqtel"]
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_sweqy"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_2hs0m"]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_1jxqw"]
+states/End/position = Vector2(1134, 118)
+states/idle/node = SubResource("AnimationNodeAnimation_onrkg")
+states/idle/position = Vector2(702, 118)
+states/run/node = SubResource("AnimationNodeAnimation_i3pqv")
+states/run/position = Vector2(881, 100)
+transitions = ["Start", "idle", SubResource("AnimationNodeStateMachineTransition_hqtel"), "idle", "run", SubResource("AnimationNodeStateMachineTransition_sweqy"), "run", "idle", SubResource("AnimationNodeStateMachineTransition_2hs0m")]
+
+[node name="Node2D" type="Node2D" unique_id=1321346854]
+
+[node name="Low" type="Sprite2D" parent="." unique_id=208839248]
+texture_filter = 1
+position = Vector2(-61, 15)
+scale = Vector2(4, 4)
+texture = ExtResource("2_i3pqv")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=1129073650]
+script = ExtResource("1_onrkg")
+
+[node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=842344817]
+
+[node name="WarriorBlue" type="Sprite2D" parent="Player" unique_id=533485753]
+texture_filter = 1
+position = Vector2(0, -32)
+texture = ExtResource("1_4flbx")
+hframes = 6
+vframes = 8
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=524469203]
+shape = SubResource("CircleShape2D_4flbx")
+
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=374268552]
+position_smoothing_enabled = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Player" unique_id=1422490432]
+libraries/ = SubResource("AnimationLibrary_hqtel")
+
+[node name="AnimationTree" type="AnimationTree" parent="Player" unique_id=1306558792]
+tree_root = SubResource("AnimationNodeStateMachine_1jxqw")
+anim_player = NodePath("../AnimationPlayer")
