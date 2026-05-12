@@ -1,16 +1,11 @@
 extends Node
 
-# Sprites that always render behind everything else.
 var _floor: Array = []
-# Non-moving sprites — dependencies computed once on register/unregister.
 var _static: Array = []
-# Moving sprites — dependencies rebuilt every frame.
 var _movable: Array = []
 
-# _static_deps[sorter] = [sorters that must render before it] (static pairs only)
 var _static_deps: Dictionary = {}
 
-# DFS state reused across _find_cycle / _dfs calls to avoid recursive lambdas.
 var _dfs_color: Dictionary = {}
 var _dfs_parent: Dictionary = {}
 var _dfs_deps: Dictionary = {}
@@ -46,24 +41,20 @@ func unregister_sorter(sorter: IsoSorter) -> void:
 
 
 func _process(_delta: float) -> void:
-	# Floor sprites get fixed negative z-order.
 	for i in _floor.size():
 		_set_z(_floor[i], Z_FLOOR_BASE + i)
 
-	# Build full dependency graph.
 	var all: Array = _static + _movable
 	var deps: Dictionary = {}
 	for s in all:
 		deps[s] = []
 
-	# Copy pre-computed static deps.
 	for s in _static:
 		if _static_deps.has(s):
 			for dep in _static_deps[s]:
 				if dep in all:
 					(deps[s] as Array).append(dep)
 
-	# Add movable deps (against everything).
 	for a in _movable:
 		for b in all:
 			if a == b:
@@ -71,10 +62,10 @@ func _process(_delta: float) -> void:
 			if not _bounds_intersect(a, b):
 				continue
 			var cmp := _compare(a, b)
-			if cmp == 1:    # a in front of b → b must render before a
+			if cmp == 1:
 				if not b in deps[a]:
 					(deps[a] as Array).append(b)
-			elif cmp == -1: # b in front of a → a must render before b
+			elif cmp == -1:
 				if deps.has(b) and not a in deps[b]:
 					(deps[b] as Array).append(a)
 
@@ -127,38 +118,65 @@ static func _compare(a: IsoSorter, b: IsoSorter) -> int:
 		if ay < by: return -1
 		return 0
 	elif at == IsoSorter.SortType.LINE and bt == IsoSorter.SortType.LINE:
-		return _compare_line_line(a, b)
+		return _compare_pts_pts(a.get_sort_points(), b.get_sort_points())
 	elif at == IsoSorter.SortType.POINT and bt == IsoSorter.SortType.LINE:
-		return _compare_point_line(a.get_sort_point_1(), b)
+		return _compare_point_pts(a.get_sort_point_1(), b.get_sort_points())
 	else:
-		return -_compare_point_line(b.get_sort_point_1(), a)
+		return -_compare_point_pts(b.get_sort_point_1(), a.get_sort_points())
 
 
-# Is `point` (the sprite it represents) in front of the `line` sprite?
-# In Godot 2D: higher screen Y = closer to camera = in front.
-static func _compare_point_line(point: Vector2, line: IsoSorter) -> int:
-	var p1 := line.get_sort_point_1()
-	var p2 := line.get_sort_point_2()
-	var lo := min(p1.y, p2.y)
-	var hi := max(p1.y, p2.y)
-	if point.y > hi: return 1
-	if point.y < lo: return -1
-	# Point Y is between the two endpoints — use line equation.
-	if abs(p2.x - p1.x) < 0.001:
-		return 1 if point.y > (p1.y + p2.y) * 0.5 else -1
-	var slope := (p2.y - p1.y) / (p2.x - p1.x)
-	var y_on_line := p1.y + slope * (point.x - p1.x)
+# Is `point` in front of the polyline defined by `pts`?
+# Finds the segment whose x-range best covers point.x, then interpolates y.
+static func _compare_point_pts(point: Vector2, pts: Array) -> int:
+	var n := pts.size()
+	if n == 0:
+		return 0
+	if n == 1:
+		return 1 if point.y > (pts[0] as Vector2).y else -1
+
+	var best_seg := 0
+	var best_dist := INF
+	for i in range(n - 1):
+		var a: Vector2 = pts[i]
+		var b: Vector2 = pts[i + 1]
+		var lo_x := min(a.x, b.x)
+		var hi_x := max(a.x, b.x)
+		if point.x >= lo_x and point.x <= hi_x:
+			best_seg = i
+			best_dist = 0.0
+			break
+		var d := min(abs(point.x - lo_x), abs(point.x - hi_x))
+		if d < best_dist:
+			best_dist = d
+			best_seg = i
+
+	var pa: Vector2 = pts[best_seg]
+	var pb: Vector2 = pts[best_seg + 1]
+	if abs(pb.x - pa.x) < 0.001:
+		return 1 if point.y > (pa.y + pb.y) * 0.5 else -1
+	var slope := (pb.y - pa.y) / (pb.x - pa.x)
+	var y_on_line := pa.y + slope * (point.x - pa.x)
 	return 1 if point.y > y_on_line else -1
 
 
-static func _compare_line_line(a: IsoSorter, b: IsoSorter) -> int:
-	var ra1 := _compare_point_line(a.get_sort_point_1(), b)
-	var ra2 := _compare_point_line(a.get_sort_point_2(), b)
-	var a_vs_b := ra1 if ra1 == ra2 else 0
+# Compares two polylines by sampling each set of endpoints against the other.
+static func _compare_pts_pts(a_pts: Array, b_pts: Array) -> int:
+	var a_votes := 0
+	for pt in a_pts:
+		a_votes += _compare_point_pts(pt, b_pts)
 
-	var rb1 := _compare_point_line(b.get_sort_point_1(), a)
-	var rb2 := _compare_point_line(b.get_sort_point_2(), a)
-	var b_vs_a := -rb1 if rb1 == rb2 else 0
+	# b_votes > 0 means b's points are in front of a's line → a is behind
+	var b_votes := 0
+	for pt in b_pts:
+		b_votes += _compare_point_pts(pt, a_pts)
+
+	var a_vs_b := 0
+	if a_votes > 0: a_vs_b = 1
+	elif a_votes < 0: a_vs_b = -1
+
+	var b_vs_a := 0
+	if b_votes > 0: b_vs_a = -1
+	elif b_votes < 0: b_vs_a = 1
 
 	if a_vs_b != 0 and b_vs_a != 0 and a_vs_b == b_vs_a:
 		return a_vs_b
@@ -166,17 +184,33 @@ static func _compare_line_line(a: IsoSorter, b: IsoSorter) -> int:
 		return a_vs_b
 	if b_vs_a != 0:
 		return b_vs_a
-	var avg_a := (a.get_sort_point_1().y + a.get_sort_point_2().y) * 0.5
-	var avg_b := (b.get_sort_point_1().y + b.get_sort_point_2().y) * 0.5
+
+	var sum_a := 0.0
+	for p in a_pts:
+		sum_a += (p as Vector2).y
+	var sum_b := 0.0
+	for p in b_pts:
+		sum_b += (p as Vector2).y
+	var avg_a := sum_a / a_pts.size()
+	var avg_b := sum_b / b_pts.size()
 	if avg_a > avg_b: return 1
 	if avg_a < avg_b: return -1
 	return 0
 
 
+static func _avg_sort_x(sorter: IsoSorter) -> float:
+	if sorter.sort_type == IsoSorter.SortType.LINE:
+		var pts := sorter.get_sort_points()
+		if pts.is_empty():
+			return sorter.get_sort_point_1().x
+		var sum := 0.0
+		for p in pts:
+			sum += p.x
+		return sum / pts.size()
+	return sorter.get_sort_point_1().x
+
+
 # ── Topological sort ──────────────────────────────────────────────────────────
-# Uses regular methods instead of recursive lambdas (GDScript 4 closures
-# capture the variable's value at creation time, so self-referential
-# lambdas always see Callable() null).
 
 func _topological_sort(nodes: Array, deps: Dictionary) -> Array:
 	_break_cycles(nodes, deps)
@@ -207,7 +241,7 @@ func _break_cycles(nodes: Array, deps: Dictionary) -> void:
 		for i in cycle.size():
 			var from_node: IsoSorter = cycle[i]
 			var to_node: IsoSorter = cycle[(i + 1) % cycle.size()]
-			var dx := abs(from_node.get_sort_point_1().x - to_node.get_sort_point_1().x)
+			var dx := abs(_avg_sort_x(from_node) - _avg_sort_x(to_node))
 			if dx > best_dx:
 				best_dx = dx
 				best_from = from_node
@@ -244,7 +278,6 @@ func _find_cycle(nodes: Array, deps: Dictionary) -> Array:
 	return cycle
 
 
-# DFS using instance state (_dfs_*) to avoid recursive lambda capture issue.
 func _dfs(node: Object) -> bool:
 	_dfs_color[node] = 1
 	for dep in _dfs_deps.get(node, []):
