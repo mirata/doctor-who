@@ -5,9 +5,12 @@
 [ext_resource type="Texture2D" uid="uid://cakxfx6u2sd7c" path="res://low.png" id="2_i3pqv"]
 [ext_resource type="Texture2D" uid="uid://dxxo2iph1477y" path="res://iso-block.png" id="4_hqtel"]
 [ext_resource type="Script" uid="uid://bmwtrh7pfe6xc" path="res://addons/iso_sorter/iso_sorter.gd" id="4_sweqy"]
+[ext_resource type="Texture2D" uid="uid://b58p0pe4rm6mr" path="res://chair.png" id="6_2hs0m"]
+[ext_resource type="Texture2D" uid="uid://rfuc4dnvfnkb" path="res://W1.png" id="7_1jxqw"]
+[ext_resource type="Texture2D" uid="uid://q88b4wwg52gb" path="res://rail-l.png" id="8_dw050"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
-radius = 25.0
+radius = 16.03122
 
 [sub_resource type="Animation" id="Animation_onrkg"]
 length = 0.001
@@ -112,16 +115,20 @@ states/run/node = SubResource("AnimationNodeAnimation_i3pqv")
 states/run/position = Vector2(881, 100)
 transitions = ["Start", "idle", SubResource("AnimationNodeStateMachineTransition_hqtel"), "idle", "run", SubResource("AnimationNodeStateMachineTransition_sweqy"), "run", "idle", SubResource("AnimationNodeStateMachineTransition_2hs0m")]
 
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1jxqw"]
+radius = 44.02655
+height = 167.94595
+
 [node name="Node2D" type="Node2D" unique_id=1321346854]
 
 [node name="Low" type="Sprite2D" parent="." unique_id=208839248]
-visible = false
 texture_filter = 1
-position = Vector2(-2113, -16)
+position = Vector2(184, 8)
 scale = Vector2(4, 4)
 texture = ExtResource("2_i3pqv")
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1129073650]
+position = Vector2(6, 0)
 script = ExtResource("1_onrkg")
 
 [node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=842344817]
@@ -152,24 +159,113 @@ sort_offset_2 = Vector2(0, 0)
 is_movable = true
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
-[node name="IsoBlock2" type="Sprite2D" parent="." unique_id=2141769313]
-position = Vector2(99, 137)
+[node name="Block" type="StaticBody2D" parent="." unique_id=1087156717]
+position = Vector2(88, 134)
+
+[node name="IsoBlock" type="Sprite2D" parent="Block" unique_id=63809643]
+position = Vector2(-478.90002, 582)
 texture = ExtResource("4_hqtel")
 
-[node name="IsoSorter" type="Node" parent="IsoBlock2" unique_id=1375567455]
+[node name="IsoSorter" type="Node" parent="Block/IsoBlock" unique_id=103240062]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offset_1 = Vector2(-121.19464, 59.481598)
-sort_offset_2 = Vector2(120.996216, -28.180313)
+sort_offset_1 = Vector2(-111.779816, 62.38623)
+sort_offset_2 = Vector2(117.99097, -28.180298)
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
-[node name="IsoBlock" type="Sprite2D" parent="." unique_id=63809643]
-position = Vector2(-295, 210)
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Block" unique_id=1924685198]
+position = Vector2(-478.90002, 582)
+polygon = PackedVector2Array(87, -44, 119, -27, -87, 76, -118, 60)
+
+[node name="Block" type="StaticBody2D" parent="Block" unique_id=585371572]
+position = Vector2(88, 134)
+
+[node name="IsoBlock" type="Sprite2D" parent="Block/Block" unique_id=972473929]
+position = Vector2(-700.9, 420)
 texture = ExtResource("4_hqtel")
 
-[node name="IsoSorter" type="Node" parent="IsoBlock" unique_id=103240062]
+[node name="IsoSorter" type="Node" parent="Block/Block/IsoBlock" unique_id=1478213087]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offset_1 = Vector2(-116.68674, 60.984253)
+sort_offset_1 = Vector2(-111.779816, 62.38623)
 sort_offset_2 = Vector2(117.99097, -28.180298)
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Block/Block" unique_id=1093573128]
+position = Vector2(-702.9, 420)
+polygon = PackedVector2Array(87, -44, 119, -27, -87, 76, -118, 60)
+
+[node name="Block2" type="StaticBody2D" parent="." unique_id=287992192]
+position = Vector2(88, 134)
+
+[node name="Chair" type="Sprite2D" parent="Block2" unique_id=1533640370]
+texture_filter = 1
+position = Vector2(280, -248)
+scale = Vector2(4, 4)
+texture = ExtResource("6_2hs0m")
+
+[node name="IsoSorter" type="Node" parent="Block2/Chair" unique_id=634268742]
+script = ExtResource("4_sweqy")
+sort_offset_1 = Vector2(1.1149597, 103.90538)
+sort_offset_2 = Vector2(117.99097, -28.180298)
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="Block2" unique_id=2009139740]
+position = Vector2(-1181, -204)
+scale = Vector2(4, 4)
+polygon = PackedVector2Array(364.5, 7.25, 379.25, 15, 365.75, 22.75, 349.25, 14.5)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=2114334403]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=524026379]
+polygon = PackedVector2Array(75, -147, 109, -130, 150, -127, 184.02646, -133.18819, 619, 91, 646, 80, 861, 193, 723, 263, 778, 297, 822, 278, 914, 319, 972, 288, 1030, 315, 1019, 325, 1038, 334, 1116, 283, 1119, 89, 146, -352, -212, -226, -272, -185, -99, -101, -15, 17, 1, 9, 0, -11, -46, -74, 24, -107, 23, -122)
+
+[node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=604699349]
+polygon = PackedVector2Array(384, 145, 388, 188, 351, 227, 336, 229, 376, 185, 373, 143)
+
+[node name="CollisionPolygon2D3" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=723297597]
+polygon = PackedVector2Array(209, 271, 140, 273, 63, 265, 64, 248, 141, 260, 209, 256)
+
+[node name="CollisionPolygon2D4" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=1754395133]
+polygon = PackedVector2Array(-35, 207, -44, 149, -17, 112, 0, 110, -29, 151, -17, 204)
+
+[node name="CollisionPolygon2D5" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=534856999]
+polygon = PackedVector2Array(123, 59, 196, 58, 276, 69, 272, 79, 196, 67, 124, 68)
+
+[node name="CollisionPolygon2D7" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=621529931]
+polygon = PackedVector2Array(-1019, 558, -1017, 268, -639, 69, -435.3719, -30.647781, -429, -124, -404, -141, -243, -57, -163, 71, -163, 103, -179, 113, -206, 103, -252, 128, -300.68762, 105.763794, -349, 127, -368, 119, -350, 108, -401, 83, -420, 54, -438, 46, -459, 58, -464, 74, -521, 104, -229, 268, -394, 456, -404, 452, -364, 387, -456, 336, -457, 363, -591, 435, -676, 386)
+
+[node name="CollisionPolygon2D9" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=860230877]
+position = Vector2(88, 81)
+polygon = PackedVector2Array(84, 627, -344, 435, -210, 251, 9.752319, 369.94843, 71, 329, 114, 344, 172, 326, 237, 377, 528, 233, 567, 258, 544, 285, 888.8381, 434.3985, 1057, 342, 1090, 358, 873, 496)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=1297238369]
+position = Vector2(167.00002, 166.00002)
+rotation = 1.5546695
+shape = SubResource("CapsuleShape2D_1jxqw")
+
+[node name="W1" type="Sprite2D" parent="." unique_id=1749311725]
+texture_filter = 1
+position = Vector2(544, 184)
+scale = Vector2(4, 4)
+texture = ExtResource("7_1jxqw")
+
+[node name="IsoSorter" type="Node" parent="W1" unique_id=1040611680]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offset_1 = Vector2(189.67624, 83.250275)
+sort_offset_2 = Vector2(353.94092, 44.419678)
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="RailL" type="Sprite2D" parent="." unique_id=1545964812]
+texture_filter = 1
+position = Vector2(-266, -6)
+scale = Vector2(4, 4)
+texture = ExtResource("8_dw050")
+
+[node name="IsoSorter" type="Node" parent="RailL" unique_id=1192720079]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offset_1 = Vector2(-99.74487, 128.92133)
+sort_offset_2 = Vector2(102.49347, 102.406555)
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
