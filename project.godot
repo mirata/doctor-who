@@ -15,6 +15,14 @@ run/main_scene="uid://cvxl5px3s68rl"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+IsoSortingManager="*uid://cq8qj16d4mpxp"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/iso_sorter/plugin.cfg")
+
 [input]
 
 left={

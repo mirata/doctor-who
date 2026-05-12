@@ -26,7 +26,7 @@ func movement_loop() -> void:
 	set_velocity(motion)
 	move_and_slide()
 	
-	if state == State.IDLE or State.RUN:
+	if state == State.IDLE or state == State.RUN:
 		if move_direction.x < -0.01:
 			$WarriorBlue.flip_h = true
 		elif move_direction.x > 0.01:

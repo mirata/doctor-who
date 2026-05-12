@@ -3,6 +3,8 @@
 [ext_resource type="Texture2D" uid="uid://73i8kyjnof7a" path="res://Warrior_Blue.png" id="1_4flbx"]
 [ext_resource type="Script" uid="uid://bu6infk68sg7v" path="res://player.gd" id="1_onrkg"]
 [ext_resource type="Texture2D" uid="uid://cakxfx6u2sd7c" path="res://low.png" id="2_i3pqv"]
+[ext_resource type="Texture2D" uid="uid://dxxo2iph1477y" path="res://iso-block.png" id="4_hqtel"]
+[ext_resource type="Script" uid="uid://bmwtrh7pfe6xc" path="res://addons/iso_sorter/iso_sorter.gd" id="4_sweqy"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
 radius = 25.0
@@ -113,8 +115,9 @@ transitions = ["Start", "idle", SubResource("AnimationNodeStateMachineTransition
 [node name="Node2D" type="Node2D" unique_id=1321346854]
 
 [node name="Low" type="Sprite2D" parent="." unique_id=208839248]
+visible = false
 texture_filter = 1
-position = Vector2(-61, 15)
+position = Vector2(-2113, -16)
 scale = Vector2(4, 4)
 texture = ExtResource("2_i3pqv")
 
@@ -142,3 +145,31 @@ libraries/ = SubResource("AnimationLibrary_hqtel")
 [node name="AnimationTree" type="AnimationTree" parent="Player" unique_id=1306558792]
 tree_root = SubResource("AnimationNodeStateMachine_1jxqw")
 anim_player = NodePath("../AnimationPlayer")
+
+[node name="IsoSorter" type="Node" parent="Player" unique_id=2111590493]
+script = ExtResource("4_sweqy")
+sort_offset_2 = Vector2(0, 0)
+is_movable = true
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="IsoBlock2" type="Sprite2D" parent="." unique_id=2141769313]
+position = Vector2(99, 137)
+texture = ExtResource("4_hqtel")
+
+[node name="IsoSorter" type="Node" parent="IsoBlock2" unique_id=1375567455]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offset_1 = Vector2(-121.19464, 59.481598)
+sort_offset_2 = Vector2(120.996216, -28.180313)
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="IsoBlock" type="Sprite2D" parent="." unique_id=63809643]
+position = Vector2(-295, 210)
+texture = ExtResource("4_hqtel")
+
+[node name="IsoSorter" type="Node" parent="IsoBlock" unique_id=103240062]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offset_1 = Vector2(-116.68674, 60.984253)
+sort_offset_2 = Vector2(117.99097, -28.180298)
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
