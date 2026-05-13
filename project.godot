@@ -19,6 +19,10 @@ config/icon="res://icon.svg"
 
 IsoSortingManager="*uid://cq8qj16d4mpxp"
 
+[display]
+
+window/stretch/mode="viewport"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/iso_sorter/plugin.cfg")

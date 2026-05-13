@@ -17,6 +17,9 @@
 [ext_resource type="Texture2D" uid="uid://bs5i11bo1bw04" path="res://console.png" id="15_606se"]
 [ext_resource type="Texture2D" uid="uid://dp2di77gevm2w" path="res://stair-rail.png" id="16_op7ga"]
 [ext_resource type="Texture2D" uid="uid://b7r3tneafru2" path="res://boundary-n.png" id="16_u1c27"]
+[ext_resource type="Texture2D" uid="uid://cl0wirxfppxxa" path="res://door-s.png" id="18_q13i1"]
+[ext_resource type="AudioStream" uid="uid://cq5ib0s217s12" path="res://audio/console/console-ambient.mp3" id="19_pylmc"]
+[ext_resource type="Script" uid="uid://4t27lkr6um8j" path="res://console_sounds.gd" id="20_pbfsw"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
 radius = 16.03122
@@ -195,7 +198,7 @@ texture = ExtResource("4_hqtel")
 [node name="IsoSorter" type="Node" parent="Block/Block/IsoBlock" unique_id=1478213087]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-111.779816, 62.38623), Vector2(117.99097, -28.180298)])
+sort_offsets = Array[Vector2]([Vector2(-117.71713, 59.841675), Vector2(-89.39276, 74.87543), Vector2(118.747314, -27.142273)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Block/Block" unique_id=1093573128]
@@ -329,7 +332,7 @@ texture = ExtResource("9_b26j0")
 [node name="IsoSorter" type="Node" parent="BoundaryS" unique_id=752352404]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(708.0919, 35.93701), Vector2(541.4629, 80.81799), Vector2(474.62897, 220.39206), Vector2(26.620056, 350.05322), Vector2(-316.3402, 170.94592), Vector2(-420.73627, 64.88635), Vector2(-715.115, -75.13135)])
+sort_offsets = Array[Vector2]([Vector2(-895.33655, -162.88193), Vector2(-431.2854, 59.881348), Vector2(-324.01154, 157.94244), Vector2(17.820007, 356.6532), Vector2(452.55975, 191.84595), Vector2(817.86395, 364.08636), Vector2(965.685, 270.26862)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="RailN2" type="Sprite2D" parent="." unique_id=181835283]
@@ -391,3 +394,29 @@ script = ExtResource("4_sweqy")
 sort_type = 1
 sort_offsets = Array[Vector2]([Vector2(3.2999268, 193.59998), Vector2(136.89984, 134.20001)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="DoorS" type="Sprite2D" parent="." unique_id=792720884]
+texture_filter = 1
+position = Vector2(732, 184)
+scale = Vector2(4, 4)
+texture = ExtResource("18_q13i1")
+
+[node name="IsoSorter" type="Node" parent="DoorS" unique_id=1003539300]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offsets = Array[Vector2]([Vector2(-6.2407837, 70.363495), Vector2(168.16132, 45.761887)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="Sounds" type="Node2D" parent="." unique_id=697774377]
+
+[node name="TARDISAmbient" type="AudioStreamPlayer" parent="Sounds" unique_id=1283418366]
+stream = ExtResource("19_pylmc")
+volume_db = -30.656
+autoplay = true
+
+[node name="ConsoleSounds" type="AudioStreamPlayer2D" parent="Sounds" unique_id=1987222577]
+position = Vector2(160, 21)
+volume_db = -0.25
+attenuation = 3.8637445
+panning_strength = 1.4
+script = ExtResource("20_pbfsw")
