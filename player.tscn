@@ -15,6 +15,8 @@
 [ext_resource type="Texture2D" uid="uid://dr7io5hogbim2" path="res://rail-s.png" id="13_u1c27"]
 [ext_resource type="Texture2D" uid="uid://blkt1442w7gel" path="res://rail-n.png" id="14_op7ga"]
 [ext_resource type="Texture2D" uid="uid://bs5i11bo1bw04" path="res://console.png" id="15_606se"]
+[ext_resource type="Texture2D" uid="uid://dp2di77gevm2w" path="res://stair-rail.png" id="16_op7ga"]
+[ext_resource type="Texture2D" uid="uid://b7r3tneafru2" path="res://boundary-n.png" id="16_u1c27"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
 radius = 16.03122
@@ -241,7 +243,7 @@ polygon = PackedVector2Array(365.5, -3.25, 380.25, 4.5, 366.75, 12.25, 350.25, 4
 [node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=2114334403]
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=524026379]
-polygon = PackedVector2Array(75, -147, 109, -130, 150, -127, 184.02646, -133.18819, 619, 91, 646, 80, 861, 193, 723, 263, 778, 297, 822, 278, 914, 319, 972, 288, 1030, 315, 1019, 325, 1038, 334, 1116, 283, 1119, 89, 146, -352, -212, -226, -272, -185, -99, -101, -15, 17, 1, 9, 0, -11, 0, -33, 27, -42, 23, -122)
+polygon = PackedVector2Array(75, -147, 109, -130, 150, -127, 184.02646, -133.18819, 619, 91, 646, 80, 861, 193, 723, 263, 778, 297, 822, 278, 914, 319, 972, 288, 1030, 315, 1019, 325, 1038, 334, 1116, 283, 1119, 89, 146, -352, -212, -226, -272, -160, -258, -152, -232, -164, -99, -101, -15, 17, 1, 9, 0, -11, 0, -33, 27, -42, 23, -122)
 
 [node name="CollisionPolygon2D7" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=621529931]
 polygon = PackedVector2Array(-1019, 558, -1017, 268, -639, 69, -435.3719, -30.647781, -429, -124, -404, -141, -243, -57, -163, 71, -163, 103, -179, 113, -206, 103, -252, 128, -300.68762, 105.763794, -349, 127, -368, 119, -350, 108, -401, 83, -420, 54, -438, 46, -459, 58, -464, 74, -521, 104, -229, 268, -394, 456, -404, 452, -364, 387, -456, 336, -457, 363, -591, 435, -676, 386)
@@ -281,6 +283,43 @@ sort_type = 1
 sort_offsets = Array[Vector2]([Vector2(-99.74487, 128.92133), Vector2(102.49347, 102.406555)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
+[node name="StairRail" type="Sprite2D" parent="." unique_id=1260403102]
+texture_filter = 1
+position = Vector2(-336, 316)
+scale = Vector2(4, 4)
+texture = ExtResource("16_op7ga")
+
+[node name="IsoSorter" type="Node" parent="StairRail" unique_id=1294629516]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offsets = Array[Vector2]([Vector2(-52.15741, 138.46545), Vector2(67.3858, -13.039368)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="Rail-w" type="Sprite2D" parent="." unique_id=477630294]
+texture_filter = 1
+position = Vector2(-42, 88)
+scale = Vector2(4, 4)
+texture = ExtResource("11_bwjto")
+
+[node name="IsoSorter" type="Node" parent="Rail-w" unique_id=1119028363]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offset_1 = Vector2(12, 105)
+sort_offsets = Array[Vector2]([Vector2(14, 110), Vector2(38, 20)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="BoundaryS2" type="Sprite2D" parent="." unique_id=178850290]
+texture_filter = 1
+position = Vector2(880, 334)
+scale = Vector2(4, 4)
+texture = ExtResource("9_n7ghd")
+
+[node name="IsoSorter" type="Node" parent="BoundaryS2" unique_id=1897692929]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offsets = Array[Vector2]([Vector2(-244.0221, 75.1315), Vector2(93.46448, 234.70822), Vector2(256.83325, 134.43057)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
 [node name="BoundaryS" type="Sprite2D" parent="." unique_id=466195225]
 texture_filter = 1
 position = Vector2(184, 202)
@@ -290,32 +329,7 @@ texture = ExtResource("9_b26j0")
 [node name="IsoSorter" type="Node" parent="BoundaryS" unique_id=752352404]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(708.0919, 35.93701), Vector2(541.4629, 80.81799), Vector2(457.86407, 157.0581), Vector2(26.620056, 350.05322), Vector2(-316.3402, 170.94592), Vector2(-420.73627, 64.88635), Vector2(-715.115, -75.13135)])
-metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
-
-[node name="BoundaryS2" type="Sprite2D" parent="." unique_id=178850290]
-texture_filter = 1
-position = Vector2(1636, 296)
-scale = Vector2(4, 4)
-texture = ExtResource("9_n7ghd")
-
-[node name="IsoSorter" type="Node" parent="BoundaryS2" unique_id=1897692929]
-script = ExtResource("4_sweqy")
-sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-244.0221, 75.1315), Vector2(93.46448, 234.70822), Vector2(266.37524, 124.184265)])
-metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
-
-[node name="RailN" type="Sprite2D" parent="." unique_id=477630294]
-texture_filter = 1
-position = Vector2(-42, 88)
-scale = Vector2(4, 4)
-texture = ExtResource("11_bwjto")
-
-[node name="IsoSorter" type="Node" parent="RailN" unique_id=1119028363]
-script = ExtResource("4_sweqy")
-sort_type = 1
-sort_offset_1 = Vector2(12, 105)
-sort_offsets = Array[Vector2]([Vector2(14, 110), Vector2(38, 20)])
+sort_offsets = Array[Vector2]([Vector2(708.0919, 35.93701), Vector2(541.4629, 80.81799), Vector2(474.62897, 220.39206), Vector2(26.620056, 350.05322), Vector2(-316.3402, 170.94592), Vector2(-420.73627, 64.88635), Vector2(-715.115, -75.13135)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="RailN2" type="Sprite2D" parent="." unique_id=181835283]
@@ -328,18 +342,6 @@ texture = ExtResource("12_606se")
 script = ExtResource("4_sweqy")
 sort_type = 1
 sort_offsets = Array[Vector2]([Vector2(-36, 115), Vector2(3, 42)])
-metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
-
-[node name="RailN3" type="Sprite2D" parent="." unique_id=1351815090]
-texture_filter = 1
-position = Vector2(138, 197)
-scale = Vector2(4, 4)
-texture = ExtResource("13_u1c27")
-
-[node name="IsoSorter" type="Node" parent="RailN3" unique_id=1122154754]
-script = ExtResource("4_sweqy")
-sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-65, 57), Vector2(71, 64)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="RailN4" type="Sprite2D" parent="." unique_id=1935852192]
@@ -364,4 +366,28 @@ texture = ExtResource("15_606se")
 script = ExtResource("4_sweqy")
 sort_type = 1
 sort_offsets = Array[Vector2]([Vector2(-69.12097, 82.64462), Vector2(76.29602, 85.64987)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="RailS" type="Sprite2D" parent="." unique_id=1351815090]
+texture_filter = 1
+position = Vector2(138, 197)
+scale = Vector2(4, 4)
+texture = ExtResource("13_u1c27")
+
+[node name="IsoSorter" type="Node" parent="RailS" unique_id=1122154754]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offsets = Array[Vector2]([Vector2(-65, 57), Vector2(71, 64)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="BoundaryN" type="Sprite2D" parent="." unique_id=1664154817]
+texture_filter = 1
+position = Vector2(-362, -300)
+scale = Vector2(4, 4)
+texture = ExtResource("16_u1c27")
+
+[node name="IsoSorter" type="Node" parent="BoundaryN" unique_id=655111583]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offsets = Array[Vector2]([Vector2(3.2999268, 193.59998), Vector2(136.89984, 134.20001)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
