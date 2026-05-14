@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cvxl5px3s68rl"]
 
 [ext_resource type="Texture2D" uid="uid://73i8kyjnof7a" path="res://Warrior_Blue.png" id="1_4flbx"]
+[ext_resource type="Script" uid="uid://cl80gsm2c8gn8" path="res://fade_in.gd" id="1_5tmop"]
 [ext_resource type="Script" uid="uid://bu6infk68sg7v" path="res://player.gd" id="1_onrkg"]
 [ext_resource type="Texture2D" uid="uid://cakxfx6u2sd7c" path="res://low.png" id="2_i3pqv"]
 [ext_resource type="Texture2D" uid="uid://dxxo2iph1477y" path="res://iso-block.png" id="4_hqtel"]
@@ -132,6 +133,7 @@ radius = 35.076065
 height = 147.9808
 
 [node name="Node2D" type="Node2D" unique_id=1321346854]
+script = ExtResource("1_5tmop")
 
 [node name="Low" type="Sprite2D" parent="." unique_id=208839248]
 texture_filter = 1
@@ -140,7 +142,7 @@ scale = Vector2(4, 4)
 texture = ExtResource("2_i3pqv")
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1129073650]
-position = Vector2(6, 0)
+position = Vector2(-393, -221)
 scale = Vector2(1.5, 1.5)
 script = ExtResource("1_onrkg")
 
