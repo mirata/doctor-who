@@ -8,7 +8,7 @@ enum State {
 }
 
 @export_category(("Stats"))
-@export var speed: int = 300
+@export var speed: int = 130
 
 var state: State = State.IDLE
 var move_direction: Vector2 = Vector2.ZERO

@@ -9,7 +9,6 @@
 [ext_resource type="Texture2D" uid="uid://b58p0pe4rm6mr" path="res://chair.png" id="6_2hs0m"]
 [ext_resource type="Texture2D" uid="uid://q88b4wwg52gb" path="res://rail-l.png" id="8_dw050"]
 [ext_resource type="Texture2D" uid="uid://cid1xcdc021t8" path="res://boundary-s.png" id="9_b26j0"]
-[ext_resource type="Texture2D" uid="uid://dofe5pxgow0ce" path="res://boundary-s2.png" id="9_n7ghd"]
 [ext_resource type="Texture2D" uid="uid://cb81y385nrwun" path="res://table.png" id="10_n7ghd"]
 [ext_resource type="Texture2D" uid="uid://d3frvkk5x7rir" path="res://rail-w.png" id="11_bwjto"]
 [ext_resource type="Texture2D" uid="uid://dy3euubm6wh1w" path="res://rail-e.png" id="12_606se"]
@@ -129,8 +128,8 @@ states/run/position = Vector2(881, 100)
 transitions = ["Start", "idle", SubResource("AnimationNodeStateMachineTransition_hqtel"), "idle", "run", SubResource("AnimationNodeStateMachineTransition_sweqy"), "run", "idle", SubResource("AnimationNodeStateMachineTransition_2hs0m")]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_1jxqw"]
-radius = 35.076065
-height = 147.9808
+radius = 10.982443
+height = 44.058838
 
 [node name="Node2D" type="Node2D" unique_id=1321346854]
 script = ExtResource("1_5tmop")
@@ -138,12 +137,11 @@ script = ExtResource("1_5tmop")
 [node name="Low" type="Sprite2D" parent="." unique_id=208839248]
 texture_filter = 1
 position = Vector2(184, -32)
-scale = Vector2(4, 4)
 texture = ExtResource("2_i3pqv")
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1129073650]
-position = Vector2(-393, -221)
-scale = Vector2(1.5, 1.5)
+position = Vector2(50, -80)
+scale = Vector2(0.5, 0.5)
 script = ExtResource("1_onrkg")
 
 [node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=842344817]
@@ -210,10 +208,14 @@ polygon = PackedVector2Array(87, -44, 119, -27, -87, 76, -118, 60)
 [node name="Block2" type="StaticBody2D" parent="." unique_id=287992192]
 position = Vector2(88, 134)
 
+[node name="CollisionPolygon2D3" type="CollisionPolygon2D" parent="Block2" unique_id=627839747]
+position = Vector2(-1321, -208)
+scale = Vector2(4, 4)
+polygon = PackedVector2Array(365.25, 9.75, 369.25, 12, 366, 13.75, 361.5, 11.5)
+
 [node name="Chair" type="Sprite2D" parent="Block2" unique_id=1533640370]
 texture_filter = 1
-position = Vector2(280, -248)
-scale = Vector2(4, 4)
+position = Vector2(142, -187)
 texture = ExtResource("6_2hs0m")
 
 [node name="IsoSorter" type="Node" parent="Block2/Chair" unique_id=634268742]
@@ -221,18 +223,16 @@ script = ExtResource("4_sweqy")
 sort_offset_1 = Vector2(1.1149597, 103.90538)
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
-[node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="Block2" unique_id=2009139740]
-position = Vector2(-1181, -204)
-scale = Vector2(4, 4)
-polygon = PackedVector2Array(364.5, 7.25, 379.25, 15, 365.75, 22.75, 349.25, 14.5)
-
 [node name="Block3" type="StaticBody2D" parent="." unique_id=683427011]
 position = Vector2(-52, 130)
 
+[node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="Block3" unique_id=2009139740]
+position = Vector2(-117, -182)
+polygon = PackedVector2Array(364.5, 7.25, 379.25, 15, 365.75, 22.75, 349.25, 14.5)
+
 [node name="Chair" type="Sprite2D" parent="Block3" unique_id=1722104608]
 texture_filter = 1
-position = Vector2(280, -248)
-scale = Vector2(4, 4)
+position = Vector2(247, -184)
 texture = ExtResource("10_n7ghd")
 
 [node name="IsoSorter" type="Node" parent="Block3/Chair" unique_id=774220862]
@@ -240,21 +240,21 @@ script = ExtResource("4_sweqy")
 sort_offset_1 = Vector2(5.6228943, 61.83174)
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
-[node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="Block3" unique_id=627839747]
-position = Vector2(-1181, -204)
-scale = Vector2(4, 4)
-polygon = PackedVector2Array(365.5, -3.25, 380.25, 4.5, 366.75, 12.25, 350.25, 4)
-
 [node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=2114334403]
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=524026379]
-polygon = PackedVector2Array(75, -147, 109, -130, 150, -127, 184.02646, -133.18819, 619, 91, 646, 80, 861, 193, 723, 263, 778, 297, 822, 278, 914, 319, 972, 288, 1030, 315, 1019, 325, 1038, 334, 1116, 283, 1119, 89, 146, -352, -212, -226, -272, -160, -258, -152, -232, -164, -99, -101, -15, 17, 1, 9, 0, -11, 0, -33, 27, -42, 23, -122)
+position = Vector2(139.82379, -22.75331)
+scale = Vector2(0.24963553, 0.24963553)
+polygon = PackedVector2Array(75, -147, 109, -130, 150, -127, 184.02646, -133.18819, 379.3629, -32.51053, 619, 91, 646, 80, 861, 193, 723, 263, 778, 297, 822, 278, 914, 319, 972, 288, 1030, 315, 1019, 325, 1038, 334, 1116, 283, 1119, 89, 146, -352, -212, -226, -272, -160, -258, -152, -232, -164, -99, -101, -15, 17, 1, 9, 0, -11, 0, -33, 27, -42, 23, -122)
 
 [node name="CollisionPolygon2D7" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=621529931]
+position = Vector2(136.89473, -22.60644)
+scale = Vector2(0.2469798, 0.24697985)
 polygon = PackedVector2Array(-1019, 558, -1017, 268, -639, 69, -435.3719, -30.647781, -429, -124, -404, -141, -243, -57, -163, 71, -163, 103, -179, 113, -206, 103, -252, 128, -300.68762, 105.763794, -349, 127, -368, 119, -350, 108, -401, 83, -420, 54, -438, 46, -459, 58, -464, 74, -521, 104, -229, 268, -394, 456, -404, 452, -364, 387, -456, 336, -457, 363, -591, 435, -676, 386)
 
 [node name="CollisionPolygon2D9" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=860230877]
-position = Vector2(88, 81)
+position = Vector2(150, -14.000004)
+scale = Vector2(0.29833132, 0.29833132)
 polygon = PackedVector2Array(84, 627, -344, 435, -210, 251, 9.752319, 369.94843, 71, 329, 114, 344, 172, 326, 237, 377, 528, 233, 567, 258, 544, 285, 888.8381, 434.3985, 1057, 342, 1090, 358, 873, 496)
 
 [node name="CollisionPolygon2D4" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=1754395133]
@@ -272,141 +272,119 @@ position = Vector2(-2, 0)
 polygon = PackedVector2Array(123, 59, 196, 58, 276, 69, 272, 79, 196, 67, 124, 68)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=1297238369]
-position = Vector2(167.00002, 166.00002)
+position = Vector2(181.00002, 18)
 rotation = 1.5546695
 shape = SubResource("CapsuleShape2D_1jxqw")
 
 [node name="RailL" type="Sprite2D" parent="." unique_id=1545964812]
 texture_filter = 1
-position = Vector2(-266, -6)
-scale = Vector2(4, 4)
+position = Vector2(71, -26)
 texture = ExtResource("8_dw050")
 
 [node name="IsoSorter" type="Node" parent="RailL" unique_id=1192720079]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-99.74487, 128.92133), Vector2(102.49347, 102.406555)])
+sort_offsets = Array[Vector2]([Vector2(-25.748795, 33.068764), Vector2(25.864105, 27.093834)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="StairRail" type="Sprite2D" parent="." unique_id=1260403102]
 texture_filter = 1
-position = Vector2(-336, 316)
-scale = Vector2(4, 4)
+position = Vector2(53, 55)
 texture = ExtResource("16_op7ga")
 
 [node name="IsoSorter" type="Node" parent="StairRail" unique_id=1294629516]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-52.15741, 138.46545), Vector2(67.3858, -13.039368)])
+sort_offsets = Array[Vector2]([Vector2(-13.104874, 33.631096), Vector2(20.063156, -10.354393)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="BoundaryS" type="Sprite2D" parent="." unique_id=466195225]
+texture_filter = 1
+position = Vector2(183, 26)
+texture = ExtResource("9_b26j0")
+
+[node name="IsoSorter" type="Node" parent="BoundaryS" unique_id=752352404]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offsets = Array[Vector2]([Vector2(-224.69177, -42.56877), Vector2(-104.63665, 15.765816), Vector2(-79.54249, 28.691566), Vector2(7.01622, 85.21127), Vector2(113.28183, 44.128326), Vector2(205.86395, 90.086365), Vector2(275.86618, 52.464813)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="Rail-w" type="Sprite2D" parent="." unique_id=477630294]
 texture_filter = 1
-position = Vector2(-42, 88)
-scale = Vector2(4, 4)
+position = Vector2(127, -2)
 texture = ExtResource("11_bwjto")
 
 [node name="IsoSorter" type="Node" parent="Rail-w" unique_id=1119028363]
 script = ExtResource("4_sweqy")
 sort_type = 1
 sort_offset_1 = Vector2(12, 105)
-sort_offsets = Array[Vector2]([Vector2(14, 110), Vector2(38, 20)])
-metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
-
-[node name="BoundaryS2" type="Sprite2D" parent="." unique_id=178850290]
-texture_filter = 1
-position = Vector2(880, 334)
-scale = Vector2(4, 4)
-texture = ExtResource("9_n7ghd")
-
-[node name="IsoSorter" type="Node" parent="BoundaryS2" unique_id=1897692929]
-script = ExtResource("4_sweqy")
-sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-244.0221, 75.1315), Vector2(93.46448, 234.70822), Vector2(256.83325, 134.43057)])
-metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
-
-[node name="BoundaryS" type="Sprite2D" parent="." unique_id=466195225]
-texture_filter = 1
-position = Vector2(184, 202)
-scale = Vector2(4, 4)
-texture = ExtResource("9_b26j0")
-
-[node name="IsoSorter" type="Node" parent="BoundaryS" unique_id=752352404]
-script = ExtResource("4_sweqy")
-sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-895.33655, -162.88193), Vector2(-431.2854, 59.881348), Vector2(-324.01154, 157.94244), Vector2(17.820007, 356.6532), Vector2(452.55975, 191.84595), Vector2(817.86395, 364.08636), Vector2(965.685, 270.26862)])
+sort_offsets = Array[Vector2]([Vector2(4.467499, 30.502441), Vector2(9.217209, 8.243645)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="RailN2" type="Sprite2D" parent="." unique_id=181835283]
 texture_filter = 1
-position = Vector2(380, 112)
-scale = Vector2(4, 4)
+position = Vector2(233, 4)
 texture = ExtResource("12_606se")
 
 [node name="IsoSorter" type="Node" parent="RailN2" unique_id=686662831]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-36, 115), Vector2(3, 42)])
+sort_offsets = Array[Vector2]([Vector2(-9.2599945, 28.60389), Vector2(0.5676575, 9.703812)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="RailN4" type="Sprite2D" parent="." unique_id=1935852192]
 texture_filter = 1
-position = Vector2(208, -2)
-scale = Vector2(4, 4)
+position = Vector2(190, -25)
 texture = ExtResource("14_op7ga")
 
 [node name="IsoSorter" type="Node" parent="RailN4" unique_id=1591671512]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-84, 66), Vector2(64, 77)])
+sort_offsets = Array[Vector2]([Vector2(-20.01706, 17.903976), Vector2(16.77449, 18.89304)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="Console" type="Sprite2D" parent="." unique_id=1727181921]
 texture_filter = 1
-position = Vector2(164, 70)
-scale = Vector2(4, 4)
+position = Vector2(179, -7)
 texture = ExtResource("15_606se")
 
 [node name="IsoSorter" type="Node" parent="Console" unique_id=2053433155]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-69.12097, 82.64462), Vector2(76.29602, 85.64987)])
-metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
-
-[node name="RailS" type="Sprite2D" parent="." unique_id=1351815090]
-texture_filter = 1
-position = Vector2(138, 197)
-scale = Vector2(4, 4)
-texture = ExtResource("13_u1c27")
-
-[node name="IsoSorter" type="Node" parent="RailS" unique_id=1122154754]
-script = ExtResource("4_sweqy")
-sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-65, 57), Vector2(71, 64)])
+sort_offsets = Array[Vector2]([Vector2(-17.325272, 22.361374), Vector2(19.05957, 22.537445)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="BoundaryN" type="Sprite2D" parent="." unique_id=1664154817]
 texture_filter = 1
-position = Vector2(-362, -300)
-scale = Vector2(4, 4)
+position = Vector2(46, -100)
 texture = ExtResource("16_u1c27")
 
 [node name="IsoSorter" type="Node" parent="BoundaryN" unique_id=655111583]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(3.2999268, 193.59998), Vector2(136.89984, 134.20001)])
+sort_offsets = Array[Vector2]([Vector2(-1.1134567, 38.55264), Vector2(25.906754, 34.337265)])
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="RailS" type="Sprite2D" parent="." unique_id=1351815090]
+texture_filter = 1
+position = Vector2(172, 25)
+texture = ExtResource("13_u1c27")
+
+[node name="IsoSorter" type="Node" parent="RailS" unique_id=1122154754]
+script = ExtResource("4_sweqy")
+sort_type = 1
+sort_offsets = Array[Vector2]([Vector2(-15.862785, 15.865784), Vector2(17.475311, 18.478287)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="DoorS" type="Sprite2D" parent="." unique_id=792720884]
 texture_filter = 1
-position = Vector2(732, 184)
-scale = Vector2(4, 4)
+position = Vector2(320, 22)
 texture = ExtResource("18_q13i1")
 
 [node name="IsoSorter" type="Node" parent="DoorS" unique_id=1003539300]
 script = ExtResource("4_sweqy")
 sort_type = 1
-sort_offsets = Array[Vector2]([Vector2(-6.2407837, 70.363495), Vector2(168.16132, 45.761887)])
+sort_offsets = Array[Vector2]([Vector2(-1.3355408, 14.934311), Vector2(45.366882, 11.915749)])
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="Sounds" type="Node2D" parent="." unique_id=697774377]
