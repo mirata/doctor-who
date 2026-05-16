@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 IsoSortingManager="*uid://cq8qj16d4mpxp"
+Transition="*res://transition.gd"
 
 [display]
 

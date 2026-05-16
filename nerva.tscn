@@ -1,0 +1,286 @@
+[gd_scene format=3 uid="uid://bw37erkyn7wcg"]
+
+[ext_resource type="Texture2D" uid="uid://cnm8t4exfo613" path="res://sprites/nerva/base.png" id="1_b38cq"]
+[ext_resource type="Script" uid="uid://bu6infk68sg7v" path="res://player.gd" id="2_0a5yp"]
+[ext_resource type="Texture2D" uid="uid://1fbqhxc4pqfg" path="res://sprites/characters/doctor/tombaker2.png" id="3_2atmw"]
+[ext_resource type="AnimationNodeBlendSpace2D" uid="uid://c2lcewcnh1ter" path="res://animations/player_idle_blend.tres" id="4_5dgdo"]
+[ext_resource type="AnimationNodeBlendSpace2D" uid="uid://lkdva51tdqsq" path="res://animations/player_walk_blend.tres" id="5_o8svl"]
+[ext_resource type="Script" uid="uid://bmwtrh7pfe6xc" path="res://addons/iso_sorter/iso_sorter.gd" id="6_gn45w"]
+[ext_resource type="Script" uid="uid://cqxm7ax10ocho" path="res://scene_door.gd" id="7_7qig4"]
+[ext_resource type="AudioStream" uid="uid://cq5ib0s217s12" path="res://audio/console/secondary-ambient.mp3" id="8_2atmw"]
+[ext_resource type="Script" uid="uid://4t27lkr6um8j" path="res://console_sounds.gd" id="9_5dgdo"]
+
+[sub_resource type="CircleShape2D" id="PlayerShape"]
+radius = 6.0
+
+[sub_resource type="Animation" id="Anim_reset"]
+length = 0.033333335
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Anim_idle_e"]
+resource_name = "idle e"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [2]
+}
+
+[sub_resource type="Animation" id="Anim_idle_n"]
+resource_name = "idle n"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [4]
+}
+
+[sub_resource type="Animation" id="Anim_idle_ne"]
+resource_name = "idle ne"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [3]
+}
+
+[sub_resource type="Animation" id="Anim_idle_s"]
+resource_name = "idle s"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [0]
+}
+
+[sub_resource type="Animation" id="Anim_idle_se"]
+resource_name = "idle se"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [1]
+}
+
+[sub_resource type="Animation" id="Anim_walk_e"]
+resource_name = "walk e"
+length = 0.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [13, 14, 15, 16]
+}
+
+[sub_resource type="Animation" id="Anim_walk_n"]
+resource_name = "walk n"
+length = 0.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [21, 22, 23, 24]
+}
+
+[sub_resource type="Animation" id="Anim_walk_ne"]
+resource_name = "walk ne"
+length = 0.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [17, 18, 19, 20]
+}
+
+[sub_resource type="Animation" id="Anim_walk_s"]
+resource_name = "walk s"
+length = 0.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [5, 6, 7, 8]
+}
+
+[sub_resource type="Animation" id="Anim_walk_se"]
+resource_name = "walk se"
+length = 0.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TomBaker:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.1, 0.2, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 1,
+"values": [9, 10, 11, 12]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimLib"]
+_data = {
+&"RESET": SubResource("Anim_reset"),
+&"idle e": SubResource("Anim_idle_e"),
+&"idle n": SubResource("Anim_idle_n"),
+&"idle ne": SubResource("Anim_idle_ne"),
+&"idle s": SubResource("Anim_idle_s"),
+&"idle se": SubResource("Anim_idle_se"),
+&"walk e": SubResource("Anim_walk_e"),
+&"walk n": SubResource("Anim_walk_n"),
+&"walk ne": SubResource("Anim_walk_ne"),
+&"walk s": SubResource("Anim_walk_s"),
+&"walk se": SubResource("Anim_walk_se")
+}
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Trans_start_idle"]
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Trans_idle_run"]
+advance_mode = 2
+advance_condition = &"Run"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="Trans_run_idle"]
+advance_mode = 2
+advance_condition = &"Idle"
+
+[sub_resource type="AnimationNodeStateMachine" id="StateMachine"]
+states/Idle/node = ExtResource("4_5dgdo")
+states/Idle/position = Vector2(349, 127)
+states/Run/node = ExtResource("5_o8svl")
+states/Run/position = Vector2(630, 105)
+states/Start/position = Vector2(128, 94)
+transitions = ["Start", "Idle", SubResource("Trans_start_idle"), "Idle", "Run", SubResource("Trans_idle_run"), "Run", "Idle", SubResource("Trans_run_idle")]
+
+[sub_resource type="RectangleShape2D" id="DoorShape"]
+size = Vector2(43, 60)
+
+[node name="Room2" type="Node2D" unique_id=78126010]
+
+[node name="Base" type="Sprite2D" parent="." unique_id=488072674]
+position = Vector2(22, -11)
+texture = ExtResource("1_b38cq")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=558731528]
+position = Vector2(-123, 122)
+script = ExtResource("2_0a5yp")
+
+[node name="TomBaker" type="Sprite2D" parent="Player" unique_id=304726998]
+texture = ExtResource("3_2atmw")
+offset = Vector2(0, -26)
+hframes = 25
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=772528280]
+shape = SubResource("PlayerShape")
+
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=926268632]
+position_smoothing_enabled = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Player" unique_id=1702633712]
+libraries/ = SubResource("AnimLib")
+
+[node name="AnimationTree" type="AnimationTree" parent="Player" unique_id=381805045]
+tree_root = SubResource("StateMachine")
+anim_player = NodePath("../AnimationPlayer")
+parameters/conditions/Idle = false
+parameters/conditions/Run = false
+parameters/Idle/blend_position = Vector2(0, 0)
+parameters/Run/blend_position = Vector2(0, -1)
+
+[node name="PlayerIsoSorter" type="Node" parent="Player" unique_id=926231425]
+script = ExtResource("6_gn45w")
+is_movable = true
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="DoorTrigger" type="Area2D" parent="." unique_id=1311073684]
+position = Vector2(-30, 0)
+script = ExtResource("7_7qig4")
+target_scene = "res://secondaryconsole.tscn"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger" unique_id=148709424]
+position = Vector2(-125.5, 107)
+shape = SubResource("DoorShape")
+
+[node name="Sounds" type="Node2D" parent="." unique_id=2020360860]
+
+[node name="TARDISAmbient" type="AudioStreamPlayer" parent="Sounds" unique_id=116880358]
+stream = ExtResource("8_2atmw")
+volume_db = -19.492
+autoplay = true
+
+[node name="ConsoleSounds" type="AudioStreamPlayer2D" parent="Sounds" unique_id=523784419]
+position = Vector2(160, 21)
+volume_db = -0.25
+attenuation = 3.8637445
+panning_strength = 1.4
+script = ExtResource("9_5dgdo")

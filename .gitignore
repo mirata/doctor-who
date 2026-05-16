@@ -1,3 +1,27 @@
-# Godot 4+ specific ignores
+# Godot 4+ generated files
 .godot/
+
+# Godot 3 import cache (if migrating)
+.import/
+
+# Exported project builds
 /android/
+/ios/
+/web/
+/linux/
+/windows/
+/macos/
+/export/
+
+# Export presets (may contain absolute paths)
+export_presets.cfg
+
+# Temporary editor files
+*.tmp
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json

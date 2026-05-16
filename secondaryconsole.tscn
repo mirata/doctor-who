@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://cvxl5px3s68rl"]
 
-[ext_resource type="Script" uid="uid://cl80gsm2c8gn8" path="res://fade_in.gd" id="1_wu3u7"]
 [ext_resource type="Texture2D" uid="uid://cakxfx6u2sd7c" path="res://sprites/secondaryconsole/main.png" id="2_4g668"]
 [ext_resource type="Script" uid="uid://bu6infk68sg7v" path="res://player.gd" id="3_lg8da"]
 [ext_resource type="Texture2D" uid="uid://1fbqhxc4pqfg" path="res://sprites/characters/doctor/tombaker2.png" id="4_4g668"]
@@ -20,8 +19,9 @@
 [ext_resource type="Texture2D" uid="uid://b7r3tneafru2" path="res://sprites/secondaryconsole/boundary-n.png" id="16_hin7k"]
 [ext_resource type="Texture2D" uid="uid://dr7io5hogbim2" path="res://sprites/secondaryconsole/rail-s.png" id="17_2rytg"]
 [ext_resource type="Texture2D" uid="uid://cl0wirxfppxxa" path="res://sprites/secondaryconsole/door-s.png" id="18_qcnqk"]
-[ext_resource type="AudioStream" uid="uid://chciu3lv5a2k2" path="res://audio/console/console-ambient.mp3" id="19_wu3u7"]
 [ext_resource type="Script" uid="uid://4t27lkr6um8j" path="res://console_sounds.gd" id="20_1taa0"]
+[ext_resource type="AudioStream" uid="uid://25gbix0lsc7t" path="res://audio/console/secondary-ambient2.mp3" id="21_lg8da"]
+[ext_resource type="Script" uid="uid://cqxm7ax10ocho" path="res://scene_door.gd" id="door_script"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
 radius = 6.0
@@ -239,8 +239,10 @@ transitions = ["Start", "Idle", SubResource("AnimationNodeStateMachineTransition
 radius = 6.99909
 height = 39.994843
 
+[sub_resource type="RectangleShape2D" id="DoorTriggerShape"]
+size = Vector2(46, 129)
+
 [node name="Node2D" type="Node2D" unique_id=1321346854]
-script = ExtResource("1_wu3u7")
 
 [node name="Low" type="Sprite2D" parent="." unique_id=208839248]
 texture_filter = 1
@@ -248,7 +250,7 @@ position = Vector2(184, -32)
 texture = ExtResource("2_4g668")
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1129073650]
-position = Vector2(58, -68)
+position = Vector2(89, -51)
 script = ExtResource("3_lg8da")
 
 [node name="TomBaker" type="Sprite2D" parent="Player" unique_id=842344817]
@@ -279,7 +281,7 @@ is_movable = true
 metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 
 [node name="Block" type="StaticBody2D" parent="." unique_id=1087156717]
-position = Vector2(88, 134)
+position = Vector2(-633, 565)
 
 [node name="IsoBlock" type="Sprite2D" parent="Block" unique_id=63809643]
 position = Vector2(-272.90002, 176)
@@ -500,10 +502,19 @@ position = Vector2(180.00002, 17.000002)
 rotation = 1.5546695
 shape = SubResource("CapsuleShape2D_1jxqw")
 
+[node name="DoorTrigger" type="Area2D" parent="." unique_id=900000001]
+position = Vector2(355, 22)
+script = ExtResource("door_script")
+target_scene = "uid://bw37erkyn7wcg"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger" unique_id=900000002]
+position = Vector2(-296, -160.5)
+shape = SubResource("DoorTriggerShape")
+
 [node name="Sounds" type="Node2D" parent="." unique_id=697774377]
 
 [node name="TARDISAmbient" type="AudioStreamPlayer" parent="Sounds" unique_id=1283418366]
-stream = ExtResource("19_wu3u7")
+stream = ExtResource("21_lg8da")
 volume_db = -19.492
 autoplay = true
 

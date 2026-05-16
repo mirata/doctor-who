@@ -10,12 +10,25 @@ enum State {
 @export_category(("Stats"))
 @export var speed: int = 100
 
+@export_category("Audio")
+@export var footsteps_volume_db: float = -20.0
+@export var footsteps_pitch: float = 1.0
+
 var state: State = State.IDLE
 var move_direction: Vector2 = Vector2.ZERO
 var last_facing: Vector2 = Vector2.UP
 
 @onready var animation_tree: AnimationTree = $AnimationTree
 #@onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree["parameters/playback"]
+
+var _footsteps: AudioStreamPlayer
+
+func _ready() -> void:
+	_footsteps = AudioStreamPlayer.new()
+	_footsteps.stream = preload("res://audio/characters/footsteps.mp3")
+	_footsteps.volume_db = footsteps_volume_db
+	_footsteps.pitch_scale = footsteps_pitch
+	add_child(_footsteps)
 
 func _physics_process(delta: float) -> void:
 	movement_loop()
@@ -42,10 +55,10 @@ func movement_loop() -> void:
 	
 	if motion != Vector2.ZERO and state == State.IDLE:
 		state = State.RUN
-		#update_anmation()
+		_footsteps.play()
 	elif motion == Vector2.ZERO and state == State.RUN:
 		state = State.IDLE
-		#update_anmation()
+		_footsteps.stop()
 
 
 #func update_anmation() -> void:
