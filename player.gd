@@ -12,7 +12,7 @@ enum State {
 
 var state: State = State.IDLE
 var move_direction: Vector2 = Vector2.ZERO
-var last_facing: Vector2 = Vector2.DOWN
+var last_facing: Vector2 = Vector2.UP
 
 @onready var animation_tree: AnimationTree = $AnimationTree
 #@onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree["parameters/playback"]
