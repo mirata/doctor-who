@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dp2di77gevm2w"
-path="res://.godot/imported/stair-rail.png-18bfaaf5f17f3195930fd81c9ff99da8.ctex"
+uid="uid://d3frvkk5x7rir"
+path="res://.godot/imported/rail-w.png-073cdee1f42ae15313251ca797269766.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://stair-rail.png"
-dest_files=["res://.godot/imported/stair-rail.png-18bfaaf5f17f3195930fd81c9ff99da8.ctex"]
+source_file="res://sprites/secondaryconsole/rail-w.png"
+dest_files=["res://.godot/imported/rail-w.png-073cdee1f42ae15313251ca797269766.ctex"]
 
 [params]
 

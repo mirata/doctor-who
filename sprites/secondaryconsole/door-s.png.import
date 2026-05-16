@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://q88b4wwg52gb"
-path="res://.godot/imported/rail-l.png-e645a6b0c131e49fa08ce2b2dd462b49.ctex"
+uid="uid://cl0wirxfppxxa"
+path="res://.godot/imported/door-s.png-30721e9c9bb43174dfd828c2efb073d2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://rail-l.png"
-dest_files=["res://.godot/imported/rail-l.png-e645a6b0c131e49fa08ce2b2dd462b49.ctex"]
+source_file="res://sprites/secondaryconsole/door-s.png"
+dest_files=["res://.godot/imported/door-s.png-30721e9c9bb43174dfd828c2efb073d2.ctex"]
 
 [params]
 

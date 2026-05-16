@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d3frvkk5x7rir"
-path="res://.godot/imported/rail-w.png-fdc7f18c616b3c53208ea5ef38e169c4.ctex"
+uid="uid://cdjc33swi3fci"
+path="res://.godot/imported/tombaker.png-7e510e0cf682a7f25cb6bc80755fde89.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://rail-w.png"
-dest_files=["res://.godot/imported/rail-w.png-fdc7f18c616b3c53208ea5ef38e169c4.ctex"]
+source_file="res://sprites/characters/doctor/tombaker.png"
+dest_files=["res://.godot/imported/tombaker.png-7e510e0cf682a7f25cb6bc80755fde89.ctex"]
 
 [params]
 

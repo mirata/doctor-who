@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cid1xcdc021t8"
-path="res://.godot/imported/boundary-s.png-b0c972935883a67de70a79935a0a110d.ctex"
+uid="uid://b58p0pe4rm6mr"
+path="res://.godot/imported/chair.png-4efefaead53432b682eeaa381d542e8d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://boundary-s.png"
-dest_files=["res://.godot/imported/boundary-s.png-b0c972935883a67de70a79935a0a110d.ctex"]
+source_file="res://sprites/secondaryconsole/chair.png"
+dest_files=["res://.godot/imported/chair.png-4efefaead53432b682eeaa381d542e8d.ctex"]
 
 [params]
 
