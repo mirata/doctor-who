@@ -29,7 +29,12 @@ func movement_loop() -> void:
 	
 	if move_direction != Vector2.ZERO:
 		last_facing = Vector2(abs(move_direction.x), -move_direction.y).normalized()
-	animation_tree.set("parameters/blend_position", last_facing)
+	animation_tree.set("parameters/Idle/blend_position", last_facing)
+	animation_tree.set("parameters/Run/blend_position", last_facing)
+	
+	var idle = !velocity;
+	animation_tree.set("parameters/conditions/Idle", idle);
+	animation_tree.set("parameters/conditions/Run", !idle);
 	
 	if (state == State.IDLE or state == State.RUN) and velocity.x != 0:
 		$TomBaker.flip_h = velocity.x < 0
