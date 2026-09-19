@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://player.gd" id="1_sweqy"]
+[ext_resource type="Texture2D" path="res://sprites/characters/doctor/tombaker3.png" id="2_2hs0m"]
+[ext_resource type="AnimationLibrary" path="res://animations/character_animations.tres" id="2_hqtel"]
+[ext_resource type="AnimationNodeStateMachine" path="res://animations/character_state_machine.tres" id="3_sweqy"]
+[ext_resource type="Script" path="res://addons/iso_sorter/iso_sorter.gd" id="5_b26j0"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
+radius = 6.0
+
+[node name="Player" type="CharacterBody2D" unique_id=1129073650]
+script = ExtResource("1_sweqy")
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=842344817]
+texture = ExtResource("2_2hs0m")
+offset = Vector2(0, -26)
+hframes = 45
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=524469203]
+shape = SubResource("CircleShape2D_4flbx")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=374268552]
+position_smoothing_enabled = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1422490432]
+libraries/ = ExtResource("2_hqtel")
+
+[node name="AnimationTree" type="AnimationTree" parent="." unique_id=1306558792]
+tree_root = ExtResource("3_sweqy")
+anim_player = NodePath("../AnimationPlayer")
+parameters/conditions/Idle = false
+parameters/conditions/Run = false
+parameters/Idle/blend_position = Vector2(0, 0)
+parameters/Run/blend_position = Vector2(-0.21839082, -0.58422935)
+
+[node name="PlayerIsoSorter" type="Node" parent="." unique_id=2111590493]
+script = ExtResource("5_b26j0")
+is_movable = true
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=158831829]
+path_desired_distance = 4.0
+target_desired_distance = 4.0
+radius = 6.0

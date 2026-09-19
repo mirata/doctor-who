@@ -1,25 +1,11 @@
-extends CharacterBody2D
+extends Character
 
-enum State {
-	IDLE,
-	RUN,
-	ATTACK,
-	DEAD
-}
-
-@export_category(("Stats"))
-@export var speed: int = 100
+## The Doctor. Click a spot to walk there, or steer with WASD — the keys take
+## over mid-walk and cancel wherever the last click was sending him.
 
 @export_category("Audio")
 @export var footsteps_volume_db: float = -20.0
 @export var footsteps_pitch: float = 1.0
-
-var state: State = State.IDLE
-var move_direction: Vector2 = Vector2.ZERO
-var last_facing: Vector2 = Vector2.UP
-
-@onready var animation_tree: AnimationTree = $AnimationTree
-#@onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree["parameters/playback"]
 
 var _footsteps: AudioStreamPlayer
 
@@ -30,43 +16,26 @@ func _ready() -> void:
 	_footsteps.pitch_scale = footsteps_pitch
 	add_child(_footsteps)
 
-func _physics_process(delta: float) -> void:
-	movement_loop()
-	
-func movement_loop() -> void:
-	move_direction.x = int(Input.is_action_pressed("right")) - int(Input.is_action_pressed("left"))
-	move_direction.y = int(Input.is_action_pressed("down")) - int(Input.is_action_pressed("up"))
-	var motion: Vector2 = move_direction.normalized() * speed;
-	set_velocity(motion)
-	move_and_slide()
-	
-	if move_direction != Vector2.ZERO:
-		last_facing = Vector2(abs(move_direction.x), -move_direction.y).normalized()
-	animation_tree.set("parameters/Idle/blend_position", last_facing)
-	animation_tree.set("parameters/Run/blend_position", last_facing)
-	
-	var idle = !velocity;
-	animation_tree.set("parameters/conditions/Idle", idle);
-	animation_tree.set("parameters/conditions/Run", !idle);
-	
-	if (state == State.IDLE or state == State.RUN) and velocity.x != 0:
-		$TomBaker.flip_h = velocity.x < 0
-	
-	
-	if motion != Vector2.ZERO and state == State.IDLE:
-		state = State.RUN
-		_footsteps.play()
-	elif motion == Vector2.ZERO and state == State.RUN:
-		state = State.IDLE
-		_footsteps.stop()
+	if nav_agent != null:
+		nav_agent.path_desired_distance = arrive_distance
+		nav_agent.target_desired_distance = arrive_distance
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("click_move"):
+		set_destination(get_global_mouse_position())
 
-#func update_anmation() -> void:
-	#match state:
-		#State.IDLE:
-			#animation_playback.travel("idle")
-		#State.RUN:
-			#animation_playback.travel("run")
-		#State.ATTACK:
-			#animation_playback.travel("attack")
-				#
+func _decide_direction() -> Vector2:
+	var keys := Vector2(
+		int(Input.is_action_pressed("right")) - int(Input.is_action_pressed("left")),
+		int(Input.is_action_pressed("down")) - int(Input.is_action_pressed("up"))
+	)
+	if keys != Vector2.ZERO:
+		clear_destination()
+		return keys
+	return direction_to_destination()
+
+func _on_started_walking() -> void:
+	_footsteps.play()
+
+func _on_stopped_walking() -> void:
+	_footsteps.stop()

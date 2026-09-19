@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://sarah.gd" id="1_1fa6i"]
+[ext_resource type="Texture2D" path="res://sprites/characters/sarah/sarah.png" id="1_7t47d"]
+[ext_resource type="AnimationLibrary" path="res://animations/character_animations.tres" id="2_1fa6i"]
+[ext_resource type="AnimationNodeStateMachine" path="res://animations/character_state_machine.tres" id="3_l52iu"]
+[ext_resource type="Script" path="res://addons/iso_sorter/iso_sorter.gd" id="4_1xs23"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
+radius = 6.0
+
+[node name="Sarah" type="CharacterBody2D" unique_id=1129073650]
+script = ExtResource("1_1fa6i")
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=842344817]
+texture = ExtResource("1_7t47d")
+offset = Vector2(0, -26)
+hframes = 45
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=524469203]
+shape = SubResource("CircleShape2D_4flbx")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1422490432]
+libraries/ = ExtResource("2_1fa6i")
+
+[node name="AnimationTree" type="AnimationTree" parent="." unique_id=1306558792]
+tree_root = ExtResource("3_l52iu")
+anim_player = NodePath("../AnimationPlayer")
+parameters/conditions/Idle = false
+parameters/conditions/Run = false
+parameters/Idle/blend_position = Vector2(0, 0)
+parameters/Run/blend_position = Vector2(-0.21839082, -0.58422935)
+
+[node name="SarahIsoSorter" type="Node" parent="." unique_id=2111590493]
+script = ExtResource("4_1xs23")
+is_movable = true
+metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=548016400]
+path_desired_distance = 4.0
+target_desired_distance = 4.0
+radius = 6.0
