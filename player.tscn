@@ -1,13 +1,14 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bbekktw4bgmji"]
 
-[ext_resource type="Script" path="res://player.gd" id="1_sweqy"]
-[ext_resource type="Texture2D" path="res://sprites/characters/doctor/tombaker3.png" id="2_2hs0m"]
-[ext_resource type="AnimationLibrary" path="res://animations/character_animations.tres" id="2_hqtel"]
-[ext_resource type="AnimationNodeStateMachine" path="res://animations/character_state_machine.tres" id="3_sweqy"]
-[ext_resource type="Script" path="res://addons/iso_sorter/iso_sorter.gd" id="5_b26j0"]
+[ext_resource type="Script" uid="uid://bu6infk68sg7v" path="res://player.gd" id="1_sweqy"]
+[ext_resource type="Texture2D" uid="uid://dmuei8k8filot" path="res://sprites/characters/doctor/tombaker3.png" id="2_2hs0m"]
+[ext_resource type="AnimationLibrary" uid="uid://bpl14m7g71080" path="res://animations/character_animations.tres" id="2_hqtel"]
+[ext_resource type="Script" uid="uid://dtxeuvntfeeve" path="res://camera_follow.gd" id="3_2hs0m"]
+[ext_resource type="AnimationNodeStateMachine" uid="uid://curh8yv6feuo1" path="res://animations/character_state_machine.tres" id="3_sweqy"]
+[ext_resource type="Script" uid="uid://bmwtrh7pfe6xc" path="res://addons/iso_sorter/iso_sorter.gd" id="5_b26j0"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
-radius = 6.0
+radius = 7.0
 
 [node name="Player" type="CharacterBody2D" unique_id=1129073650]
 script = ExtResource("1_sweqy")
@@ -21,7 +22,7 @@ hframes = 45
 shape = SubResource("CircleShape2D_4flbx")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=374268552]
-position_smoothing_enabled = true
+script = ExtResource("3_2hs0m")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1422490432]
 libraries/ = ExtResource("2_hqtel")

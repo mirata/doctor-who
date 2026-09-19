@@ -33,6 +33,7 @@ cancels the current click destination.
 | `secondaryconsole.tscn` | Console room — layout, audio, Player instance |
 | `nerva.tscn` | Second room, reached through the DoorTrigger |
 | `character.gd` | **`Character` base class** — movement, pathfinding, animation, idle/run state |
+| `camera_follow.gd` | Camera that gives on acceleration but locks at constant speed |
 | `nav_region.gd` | Re-bakes a room's navmesh from live collision geometry on load |
 | `navigation/secondaryconsole_nav.tres` | Walkable floor outline for the console room |
 | `player.tscn` / `player.gd` | **The Doctor.** Walks on WASD. Owns the camera |
@@ -92,6 +93,66 @@ Both characters use the **same** `character_animations.tres` and
 `Sprite:frame`. A character whose sprite node is named anything else will not
 animate.
 
+### Pixel-grid movement
+
+The viewport is 640x320, so **nothing can move less than one pixel**. With
+`snap_2d_transforms_to_pixel` a fractional step per frame renders as an uneven
+stutter, and no amount of camera work fixes it — the motion simply does not land
+on the grid.
+
+`speed` must therefore be a multiple of the physics tick rate (60). At the old
+100 px/s that was 1.6666 px/frame, and the world scrolled in a repeating
+**1, 2, 2** cadence (a 20 Hz wobble) while the sprite's snapped offset from the
+camera flipped between -1 and -2. At **120** it is exactly 2 px/frame: cadence
+2, 2, 2 and a fixed sprite offset.
+
+**Diagonals are still fractional** — normalising gives 120 x 0.7071 = 1.4142
+px/frame and a 1, 2, 1, 1, 2 cadence. Fixing that means quantising the eight
+directions to whole-pixel vectors, which forces diagonal travel to be either
+~41% faster (2 px per axis) or ~29% slower (1 px per axis) than cardinal. That
+is a game-feel decision, deliberately not taken.
+
+When diagnosing anything like this, measure the **rendered** result — log
+`round()` of the camera and sprite positions frame by frame. World-space
+transforms will look perfectly smooth while the screen stutters.
+
+### Camera
+
+`Player/Camera2D` runs `camera_follow.gd` with `top_level = true`, driving its
+own global position rather than inheriting the Doctor's.
+
+**Do not turn Godot's `position_smoothing_enabled` back on.** It trails a moving
+target by `velocity / smoothing_speed` — a permanent ~20 px lag at walking pace.
+The offset itself is harmless, but with `snap_2d_transforms_to_pixel` the camera
+and the sprite cross pixel boundaries at different moments, so the sprite
+shimmers by a pixel the entire time it moves. Measured with it on, the Doctor's
+on-screen position swung 40.6 px and changed whole-pixel position on 413 of 517
+frames.
+
+The replacement feeds the target's measured velocity forward, so the camera
+travels at exactly their speed and the spring only absorbs *changes* in speed:
+
+| Export | Default | Meaning |
+|--------|---------|---------|
+| `slack_seconds` | 0.18 | How long the camera takes to pick up speed when they start or speed up. Deliberately one-directional — see below. 0 makes it rigid |
+| `follow_speed` | 8.0 | How sharply the drift is recovered afterwards |
+
+Two details that are easy to get wrong, both of which produced visible faults:
+
+- **The slack only applies to speeding up.** Easing *out* of a speed means the
+  camera coasts on after they have stopped, so it sails past and springs back.
+  Measured with a symmetric ease: 7.07 px past him, taking ~90 frames to return.
+  Direction is always taken from the target exactly, and speed drops instantly.
+- **Correct the error after travelling, not before.** Doing it first leaves the
+  camera permanently one frame of travel ahead (+2.00 px at 120 px/s), which
+  then has to unwind every time they stop.
+
+Measured now: 5.6 px of give while getting going, **0.00 px** of overshoot on
+stopping, and a resting offset of **0.00 px** — at constant speed the camera
+sits exactly on him, so both snap to the pixel grid identically. Velocity is
+measured from the target's actual position change, so walking into a wall counts
+as standing still.
+
 ### Navigation
 
 `Character` exposes the pathfinding both characters use:
@@ -119,10 +180,18 @@ and need no links. A genuine second storey overlapping this one in screen space
 would need `NavigationLink2D`.
 
 #### Things that will bite you here
-- **`agent_radius` must be >= the character collision radius (6).** Measured:
-  at 3 and 4 the Doctor stalled on 2 of 6 destinations, at 5 on 1 of 6, at 6 and
-  7 on none. Below the body radius, paths hug walls the body cannot fit through
-  and he grinds to a halt against them.
+- **`agent_radius` must equal the character collision radius**, currently
+  **4** for both. The baked mesh is not the floor — it is the set of positions a
+  character's *centre* may occupy, i.e. the floor eroded by the body radius. Set
+  it below the body and paths are generated through gaps the body cannot fit,
+  so it wedges against walls while the agent insists the path is fine. Measured
+  with a 6 px body: at 3 and 4 the Doctor stalled on 2 of 6 destinations, at 5
+  on 1 of 6, at 6 and 7 on none — the cliff is exactly at the body radius.
+  **To change the visible inset, move the body and the agent together**;
+  measured walkable mesh by radius: 6 -> 514 sample points, 4 -> 890, 3 -> 953,
+  each with 0 stalls of 8 destinations and no stranded islands. The body
+  radius lives in `player.tscn` and `sarah.tscn` as a `CircleShape2D`, and both
+  must match or the mesh is wrong for one of them.
 - **Do not use `is_navigation_finished()` alone for arrival.** The path is built
   asynchronously and the agent reports "finished" in the frames before it
   exists, which reads as an instant arrival. Measure distance to the target.
@@ -140,22 +209,35 @@ would need `NavigationLink2D`.
 
 ### Sarah's following
 
-She routes to the Doctor through the navigation mesh whenever he gets too far
-ahead, so she goes around the furniture and up the stairs rather than walking
-into things.
+She routes to the Doctor through the navigation mesh, so she goes around the
+furniture and up the stairs rather than walking into things.
+
+Her pace is **continuous, not on/off**: speed is `his pace + (gap - wanted gap)
+x catch_up_gain`, so the further behind she is the harder she pushes, and at the
+right distance she is moving at exactly his speed. That is a stable equilibrium
+— drop back and the gain pushes her on, crowd him and she eases off — so she
+holds station instead of stopping dead and sprinting again. An earlier on/off
+version stopped at one distance and restarted at another, which read as a
+stop-start shuffle over any real distance.
+
+Her speed is also rounded to whole pixels per frame (60 / 120 / 180 / 240), for
+the same reason his is: fractional steps stutter on a 640x320 viewport. It also
+gives the burst distinct gears rather than a sliding speed.
 
 | Export | Default | Meaning |
 |--------|---------|---------|
-| `follow_distance` | 90 px | She sets off past this |
-| `close_enough` | 55 px | ...and stops inside this. The gap is what stops her twitching |
-| `catch_up_speed` | 1.25 | Speed multiplier while closing; her trail is longer than the straight line |
+| `follow_distance` | 90 px | The gap she settles into while he walks |
+| `stop_distance` | 55 px | The gap she closes to once he stops |
+| `catch_up_gain` | 2.0 | Extra speed per pixel she is behind — this is the burst |
+| `max_speed` | 240 | Ceiling on the burst |
 | `repath_distance` | 20 px | How far he moves before she re-routes |
 
-`follow_distance` is deliberately **below** 3 m. It's the distance she *reacts*
-at, not the worst case — the gap keeps opening while she gets going. Measured
-over a winding route the peak gap is 118 px (3.0 m) and the mean 66 px (1.7 m).
-Retune by measuring the peak, not by setting this to 3 m. With pathfinding the
-measured peak is 90 px (2.3 m) and the mean 56 px (1.4 m).
+Measured over a long straight walk: she settles to a constant gap of ~100 px
+(2.6 m) with **zero** swing, moving at his exact speed, and closes to precisely
+`stop_distance` when he stops. Starting 240 px behind she bursts at 240 px/s and
+gears down through 180 to 120 as she arrives. Because the gain gives a band of
+valid resting gaps rather than a single point, the settled distance varies by up
+to ~30 px depending on how she approached; raise `catch_up_gain` to narrow it.
 
 ---
 
@@ -202,6 +284,23 @@ Every visible sprite has a child `IsoSorter` node. The singleton `IsoSortingMana
 - **`render_below_all = true`** → floor/ground layer (z = −1000…)
 - **`is_movable = false`** → static; sorted once on scene load
 - **`is_movable = true`** → player and future moving objects; re-sorted every frame
+
+### Sort bounds (why things sometimes draw in the wrong order)
+Two sorters are only compared when their `get_bounds()` rects overlap — the
+comparison is skipped otherwise as an optimisation. **If the bounds are wrong,
+the sort silently falls back to registration order**, which looks like a sprite
+stubbornly drawing on top of something it is standing behind.
+
+`get_bounds()` uses the sprite's frame when it can find one. It looks at the
+sorter's parent *and* the parent's children, because characters hang the sorter
+off a `CharacterBody2D` with the `Sprite2D` beside it rather than under it.
+Without that second lookup it falls back to a fixed 48x48 box around the sort
+point: the Doctor and Sarah are 96 px tall, so they sorted correctly only when
+within ~48 px of each other and Sarah drew over him at every normal following
+distance.
+
+It also divides the texture by `hframes`/`vframes` — a spritesheet's texture is
+the whole strip, so a 45-frame sheet would otherwise report bounds 4320 px wide.
 
 ### Adding a new sprite to the scene
 1. Add the `Sprite2D` (or `StaticBody2D` with sprite child).

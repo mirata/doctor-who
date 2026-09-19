@@ -16,7 +16,11 @@ enum State {
 }
 
 @export_category("Stats")
-@export var speed: int = 100
+## Pixels per second. Keep this a multiple of the physics tick rate (60), so a
+## frame's movement lands on a whole pixel: the viewport is only 640x320, so
+## nothing can move less than one pixel and a fractional step renders as an
+## uneven 1,2,2 stutter. 120 gives exactly 2 px/frame.
+@export var speed: int = 120
 
 @export_category("Navigation")
 ## How close counts as having arrived at a destination.

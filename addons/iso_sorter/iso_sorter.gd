@@ -62,12 +62,17 @@ func get_sort_points() -> Array[Vector2]:
 
 
 func get_bounds() -> Rect2:
-	var p = get_parent()
-	if p is Sprite2D:
-		var s := p as Sprite2D
-		if s.texture:
-			var sz: Vector2 = s.texture.get_size() * s.scale
-			return Rect2(s.global_position - sz * 0.5 + s.offset * s.scale, sz)
+	var sprite := _sprite()
+	if sprite != null and sprite.texture:
+		# One frame, not the whole sheet: a spritesheet's texture is the full
+		# strip, so using it directly gives a bounds hundreds of pixels wide.
+		var frame_size: Vector2 = sprite.texture.get_size() / Vector2(
+			maxi(sprite.hframes, 1), maxi(sprite.vframes, 1))
+		var size: Vector2 = frame_size * sprite.scale
+		var corner: Vector2 = sprite.global_position + sprite.offset * sprite.scale
+		if sprite.centered:
+			corner -= size * 0.5
+		return Rect2(corner, size)
 	if sort_type == SortType.LINE and not sort_offsets.is_empty():
 		var parent_pos := _parent_global_pos()
 		var r := Rect2(parent_pos + sort_offsets[0], Vector2.ZERO)
@@ -76,6 +81,22 @@ func get_bounds() -> Rect2:
 		return r.grow(48)
 	var pt := get_sort_point_1()
 	return Rect2(pt - Vector2(24, 24), Vector2(48, 48))
+
+
+## The sprite this sorter stands for. Usually the parent, but characters hang
+## the sorter off a CharacterBody2D with the sprite alongside it — without
+## looking there too, such a sorter falls back to a small fixed box and stops
+## being compared against anything more than ~24 px away, leaving its draw order
+## down to registration order.
+func _sprite() -> Sprite2D:
+	var p = get_parent()
+	if p is Sprite2D:
+		return p as Sprite2D
+	if p != null:
+		for child in p.get_children():
+			if child is Sprite2D:
+				return child as Sprite2D
+	return null
 
 
 func _parent_global_pos() -> Vector2:

@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://cvxl5px3s68rl"]
 
 [ext_resource type="Texture2D" uid="uid://cakxfx6u2sd7c" path="res://sprites/secondaryconsole/main.png" id="2_4g668"]
-[ext_resource type="PackedScene" path="res://player.tscn" id="2_wu3u7"]
-[ext_resource type="PackedScene" path="res://sarah.tscn" id="4_lg8da"]
+[ext_resource type="PackedScene" uid="uid://bbekktw4bgmji" path="res://player.tscn" id="2_wu3u7"]
+[ext_resource type="PackedScene" uid="uid://bri3yfmcikb3e" path="res://sarah.tscn" id="4_lg8da"]
 [ext_resource type="Script" uid="uid://bmwtrh7pfe6xc" path="res://addons/iso_sorter/iso_sorter.gd" id="5_kshtc"]
 [ext_resource type="Texture2D" uid="uid://dxxo2iph1477y" path="res://sprites/iso-block.png" id="6_a7f0f"]
 [ext_resource type="Texture2D" uid="uid://b58p0pe4rm6mr" path="res://sprites/secondaryconsole/chair.png" id="7_np8fg"]
@@ -19,7 +19,7 @@
 [ext_resource type="Texture2D" uid="uid://cl0wirxfppxxa" path="res://sprites/secondaryconsole/door-s.png" id="18_qcnqk"]
 [ext_resource type="Script" uid="uid://4t27lkr6um8j" path="res://console_sounds.gd" id="20_1taa0"]
 [ext_resource type="AudioStream" uid="uid://25gbix0lsc7t" path="res://audio/console/secondary-ambient2.mp3" id="21_lg8da"]
-[ext_resource type="NavigationPolygon" uid="uid://0etgjq7h4jma" path="res://navigation/secondaryconsole_nav.tres" id="23_kshtc"]
+[ext_resource type="NavigationPolygon" uid="uid://c708yb5ebiyo5" path="res://navigation/secondaryconsole_nav.tres" id="23_kshtc"]
 [ext_resource type="Script" uid="uid://bnpasxmj0jc6b" path="res://nav_region.gd" id="24_a7f0f"]
 [ext_resource type="Script" uid="uid://cqxm7ax10ocho" path="res://scene_door.gd" id="door_script"]
 
@@ -243,12 +243,12 @@ polygon = PackedVector2Array(84, 627, -344, 435, -210, 251, 9.752319, 369.94843,
 [node name="CollisionPolygon2D4" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=1754395133]
 position = Vector2(141, -30)
 scale = Vector2(0.2840909, 0.28409073)
-polygon = PackedVector2Array(-38.72, 204.16013, -49.28, 147.84009, -24.640015, 119.68008, -10.559998, 123.20007, -38.72, 151.36009, -24.640015, 204.16013)
+polygon = PackedVector2Array(-38.72, 204.16013, -49.28, 147.84009, -24.640015, 119.68008, -10.559998, 123.20007, -24.640015, 151.36009, -24.640015, 204.16013)
 
 [node name="CollisionPolygon2D2" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=604699349]
 position = Vector2(116, -35)
 scale = Vector2(0.30614388, 0.3061433)
-polygon = PackedVector2Array(385.4397, 156.7893, 391.9726, 182.92087, 356.04175, 225.38464, 346.24243, 222.1182, 378.9068, 182.92087, 375.64038, 156.7893)
+polygon = PackedVector2Array(391.9726, 146.98997, 395.239, 186.18732, 365.84106, 225.38464, 346.24243, 222.1182, 362.57465, 182.92087, 372.37396, 146.98997)
 
 [node name="CollisionPolygon2D3" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=723297597]
 position = Vector2(140.74355, -24.33611)
