@@ -1,0 +1,109 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" uid="uid://cqxv16rt6arji" path="res://sprites/ui/dialogue_frame.png" id="frame_tex"]
+[ext_resource type="Script" path="res://dialogue/balloon/tardis_balloon.gd" id="1_0sx5c"]
+[ext_resource type="FontFile" path="res://fonts/PressStart2P-Regular.ttf" id="2_xwjqf"]
+[ext_resource type="Script" path="res://addons/dialogue_manager/nodes/dialogue_label/dialogue_label.gd" id="3_v3fun"]
+[ext_resource type="Script" path="res://addons/dialogue_manager/nodes/responses_menu/dialogue_responses_menu.gd" id="4_kf3be"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxFlat_88m6o"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+texture = ExtResource("frame_tex")
+texture_margin_left = 5.0
+texture_margin_top = 5.0
+texture_margin_right = 5.0
+texture_margin_bottom = 5.0
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="TardisBalloon" type="CanvasLayer" unique_id=954644413]
+layer = 100
+script = ExtResource("1_0sx5c")
+
+[node name="Balloon" type="Control" parent="." unique_id=1951167751]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="Balloon" unique_id=1818311017]
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -72.0
+offset_right = -8.0
+offset_bottom = -8.0
+
+[node name="PanelContainer" type="PanelContainer" parent="Balloon/MarginContainer" unique_id=1120205134]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_88m6o")
+
+[node name="Rows" type="VBoxContainer" parent="Balloon/MarginContainer/PanelContainer" unique_id=937091896]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="CharacterLabel" type="RichTextLabel" parent="Balloon/MarginContainer/PanelContainer/Rows" unique_id=1287852885]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/normal_font = ExtResource("2_xwjqf")
+theme_override_font_sizes/normal_font_size = 8
+theme_override_colors/default_color = Color(0.9411765, 0.7529412, 0.3764706, 1)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="DialogueLabel" type="RichTextLabel" parent="Balloon/MarginContainer/PanelContainer/Rows" unique_id=925576112]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_fonts/normal_font = ExtResource("2_xwjqf")
+theme_override_font_sizes/normal_font_size = 8
+theme_override_colors/default_color = Color(0.92156863, 0.90588236, 0.87058824, 1)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+script = ExtResource("3_v3fun")
+seconds_per_step = 0.04
+skip_pause_at_abbreviations = PackedStringArray("Mr", "Mrs", "Ms", "Dr", "etc", "eg", "ex")
+
+[node name="ProgressHolder" type="Control" parent="Balloon/MarginContainer/PanelContainer/Rows" unique_id=2047293746]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Progress" type="Polygon2D" parent="Balloon/MarginContainer/PanelContainer/Rows/ProgressHolder" unique_id=422668765]
+unique_name_in_owner = true
+position = Vector2(596, 0)
+color = Color(0.8509804, 0.69803923, 0.41568628, 1)
+polygon = PackedVector2Array(0, 0, 6, 0, 3, 4)
+
+[node name="CenterContainer" type="CenterContainer" parent="Balloon" unique_id=1080353942]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ResponsesMenu" type="Container" parent="Balloon/CenterContainer" unique_id=702449755 node_paths=PackedStringArray("response_template")]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("4_kf3be")
+response_template = NodePath("ResponseTemplate")
+
+[node name="ResponseTemplate" type="Button" parent="Balloon/CenterContainer/ResponsesMenu" unique_id=40753813]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92156863, 0.90588236, 0.87058824, 1)
+theme_override_fonts/font = ExtResource("2_xwjqf")
+theme_override_font_sizes/font_size = 8
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=1005354209]
+unique_name_in_owner = true
+
+[connection signal="gui_input" from="Balloon" to="." method="_on_balloon_gui_input"]
+[connection signal="response_selected" from="Balloon/CenterContainer/ResponsesMenu" to="." method="_on_responses_menu_response_selected"]

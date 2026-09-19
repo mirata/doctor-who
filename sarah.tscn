@@ -1,13 +1,18 @@
 [gd_scene format=3 uid="uid://bri3yfmcikb3e"]
 
-[ext_resource type="Script" uid="uid://whpfrjrdkcts" path="res://sarah.gd" id="1_1fa6i"]
-[ext_resource type="Texture2D" uid="uid://6wf4jiq8eid0" path="res://sprites/characters/sarah/sarah.png" id="1_7t47d"]
-[ext_resource type="AnimationLibrary" uid="uid://bpl14m7g71080" path="res://animations/character_animations.tres" id="2_1fa6i"]
-[ext_resource type="AnimationNodeStateMachine" uid="uid://curh8yv6feuo1" path="res://animations/character_state_machine.tres" id="3_l52iu"]
-[ext_resource type="Script" uid="uid://bmwtrh7pfe6xc" path="res://addons/iso_sorter/iso_sorter.gd" id="4_1xs23"]
+[ext_resource type="Script" path="res://sarah.gd" id="1_1fa6i"]
+[ext_resource type="Texture2D" path="res://sprites/characters/sarah/sarah.png" id="1_7t47d"]
+[ext_resource type="AnimationLibrary" path="res://animations/character_animations.tres" id="2_1fa6i"]
+[ext_resource type="AnimationNodeStateMachine" path="res://animations/character_state_machine.tres" id="3_l52iu"]
+[ext_resource type="Script" path="res://addons/iso_sorter/iso_sorter.gd" id="4_1xs23"]
+[ext_resource type="Script" path="res://addons/dialogue_manager/nodes/actionable/dialogue_actionable_2d.gd" id="6_1xs23"]
+[ext_resource type="Resource" path="res://dialogue/sarah.dialogue" id="7_xtpn6"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_4flbx"]
 radius = 7.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_yh4vf"]
+size = Vector2(28, 56)
 
 [node name="Sarah" type="CharacterBody2D" unique_id=1129073650]
 script = ExtResource("1_1fa6i")
@@ -40,3 +45,13 @@ metadata/_custom_type_script = "uid://bmwtrh7pfe6xc"
 path_desired_distance = 4.0
 target_desired_distance = 4.0
 radius = 6.0
+
+[node name="Actionable" type="Area2D" parent="." unique_id=101001895]
+monitoring = false
+script = ExtResource("6_1xs23")
+dialogue_resource = ExtResource("7_xtpn6")
+dialogue_cue = "start"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Actionable" unique_id=1318190511]
+position = Vector2(0, -22)
+shape = SubResource("RectangleShape2D_yh4vf")

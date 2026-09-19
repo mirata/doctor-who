@@ -16,6 +16,9 @@ A Doctor Who themed isometric adventure game built in Godot 4.6. The current sce
 | Action | Input |
 |--------|-------|
 | Walk to a spot | Left mouse click |
+| Talk to someone | Click them, or E when near |
+| Advance dialogue | Click the balloon, or Space / Enter (`ui_accept`) |
+| Skip the typing effect | Escape (`ui_cancel`), or click while it types |
 | Move left | A |
 | Move right | D |
 | Move up | W |
@@ -34,6 +37,10 @@ cancels the current click destination.
 | `nerva.tscn` | Second room, reached through the DoorTrigger |
 | `character.gd` | **`Character` base class** — movement, pathfinding, animation, idle/run state |
 | `camera_follow.gd` | Camera that gives on acceleration but locks at constant speed |
+| `dialogue/*.dialogue` | Conversations, in Dialogue Manager's script format |
+| `dialogue/balloon/tardis_balloon.*` | The pixel-art dialogue balloon |
+| `fonts/PressStart2P-Regular.ttf` | Pixel font for UI text (SIL OFL, licence alongside) |
+| `addons/dialogue_manager/` | Third-party: Dialogue Manager 4.1.0 |
 | `nav_region.gd` | Re-bakes a room's navmesh from live collision geometry on load |
 | `navigation/secondaryconsole_nav.tres` | Walkable floor outline for the console room |
 | `player.tscn` / `player.gd` | **The Doctor.** Walks on WASD. Owns the camera |
@@ -267,6 +274,96 @@ animation_tree.set("parameters/conditions/Run", !is_idle)
 
 ### Sprite flipping
 `Sprite.flip_h` is set only when `velocity.x != 0`, preserving the last horizontal facing during idle. The spritesheet only contains right-facing frames; left movement is handled by flipping.
+
+---
+
+## Dialogue
+
+Uses **Dialogue Manager 4.1.0** (Nathan Hoad), which targets Godot 4.6+. Added
+as a vendored copy under `addons/dialogue_manager/`, plugin enabled and the
+`DialogueManager` autoload registered in `project.godot`. The C# half of the
+addon was deleted on install — this is a GDScript-only project.
+
+### Talking to someone
+A character becomes interactable by getting a `DialogueActionable2D` child with
+a `dialogue_resource` and a `cue` (Sarah has one named `Actionable`). Its
+collision shape is what a click has to hit, so it is sized to the drawn figure,
+not to the much smaller movement collider.
+
+`player.gd` drives it two ways:
+- **Clicking** an actionable walks the Doctor to it and starts the conversation
+  once he is within `interact_distance` (34 px).
+- **Pressing `interact`** talks to whatever is already within that distance.
+
+He turns to face them first. While dialogue runs, `_in_dialogue` makes
+`_decide_direction()` return zero and input is ignored, so the balloon owns the
+keyboard — otherwise WASD walks him around mid-conversation.
+
+### The balloon
+`dialogue/balloon/tardis_balloon.tscn` is registered as
+`dialogue_manager/runtime/balloon_path`, so `show_dialogue_balloon()` uses it
+everywhere. Its script is a **copy** of the addon's example balloon rather than
+a subclass, so an addon update cannot silently restyle the game; the flow
+control is theirs, the presentation is ours.
+
+#### The frame
+The panel's border is an **embossed 9-patch**, `sprites/ui/dialogue_frame.png`
+(16x16), applied as a `StyleBoxTexture` with **5 px slice margins**.
+
+A `StyleBoxFlat` cannot do this: it has a single `border_color`, so every edge
+is the same shade and the frame reads as a drawn-on hairline. An embossed frame
+needs the top and left lit and the bottom and right shaded — per-pixel control,
+which means a texture.
+
+**Getting the slice margin right matters more than it looks.** It must be at
+least large enough to contain the corner artwork; set it smaller and the corner
+rounding falls into the stretchable edge strip and smears along the whole edge.
+To find it, take the smallest `m` for which rows `m..h-m` are identical to each
+other and columns `m..w-m` likewise — that is the point past which the artwork
+stops varying along its length. For the current frame that is 5, while its
+visible border is only 4 px thick.
+
+`axis_stretch_horizontal/vertical = 1` (tile, not stretch) keeps the bands crisp
+at any panel size. Content margins (10/8) are measured in from the panel edge,
+so they include the border thickness.
+
+If you redraw the frame, re-run that uniformity check rather than assuming the
+margin still fits.
+
+#### Everything else
+- **8 px font**, imported with `antialiasing=0`, `hinting=0`,
+  `subpixel_positioning=0`. Without those three the text is greyscale-blended
+  and looks wrong next to the sprites.
+- **Opaque fill.** Translucency lets the busy room show through and makes the
+  text harder to read.
+
+> The copied example balloon injects a "This is an example balloon" banner in
+> `_ready()`. It is removed in our copy; if you ever re-copy it, delete that
+> block again.
+
+**The balloon scene must connect two signals**, which the addon's example scene
+carries and a hand-built one will not:
+
+```
+[connection signal="gui_input" from="Balloon" to="." method="_on_balloon_gui_input"]
+[connection signal="response_selected" from="Balloon/CenterContainer/ResponsesMenu" to="." method="_on_responses_menu_response_selected"]
+```
+
+Both advancing *and* choosing a response live inside those handlers, so without
+the first connection a conversation opens and can never be advanced — by mouse
+or keyboard — and without the second, responses do nothing.
+
+A conversation ends when its flow reaches `=> END` or the end of the file; there
+is no bail-out key. `ui_cancel` only skips the typing animation.
+
+Typing speed is `seconds_per_step` on the balloon's `DialogueLabel`, currently
+**0.04** (25 characters/second, so a 48-character line takes ~1.9 s). The addon
+default of 0.02 reads as a blur at this text size. Individual lines can override
+it inline with `[speed=N]`, and `[wait=N]` pauses mid-line.
+
+### Writing dialogue
+`~ cue` marks an entry point, `Name: line` is a spoken line, `- option` is a
+response, `=> cue` jumps and `=> END` finishes. `[[a|b|c]]` picks one at random.
 
 ---
 
