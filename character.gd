@@ -49,9 +49,16 @@ func movement_loop() -> void:
 	var motion: Vector2 = move_direction.normalized() * _current_speed()
 	set_velocity(motion)
 	move_and_slide()
+	_after_move()
 
 	_drive_animation()
 	_update_state(motion)
+
+## Called once this character has moved for the frame. Override for anything
+## that adjusts position rather than heading, such as keeping out of someone's
+## way.
+func _after_move() -> void:
+	pass
 
 ## Speed to walk at this frame. Override to vary it situationally.
 func _current_speed() -> float:

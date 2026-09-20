@@ -12,6 +12,12 @@ const SOUNDS: Array[AudioStream] = [
 	preload("res://audio/console/console9.mp3"),
 ]
 
+## Shortest gap between console noises, in seconds.
+@export var min_interval: float = 20.0
+
+## Longest gap between console noises, in seconds.
+@export var max_interval: float = 55.0
+
 var _timer: Timer
 
 func _ready() -> void:
@@ -19,9 +25,12 @@ func _ready() -> void:
 	_timer.one_shot = true
 	_timer.timeout.connect(_play_random)
 	add_child(_timer)
-	_timer.start(randf_range(5.0, 20.0))
+	_schedule_next()
 
 func _play_random() -> void:
 	stream = SOUNDS[randi() % SOUNDS.size()]
 	play()
-	_timer.start(randf_range(5.0, 20.0))
+	_schedule_next()
+
+func _schedule_next() -> void:
+	_timer.start(randf_range(min_interval, max_interval))

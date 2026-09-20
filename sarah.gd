@@ -29,6 +29,16 @@ extends Character
 ## How far he moves from where she was last headed before she re-routes.
 @export var repath_distance: float = 20.0
 
+## How close he can get before she gives way. Walking into her shoulders her
+## aside rather than passing through, but because it moves *her* rather than
+## blocking *him*, he can never end up wedged against her.
+@export var personal_space: float = 14.0
+
+## Ceiling on how fast she is shouldered aside, in pixels per second. This has
+## to stay comfortably above walking speed or he simply outruns her giving way
+## and walks through her anyway — at 90 against his 120 he passed clean through.
+@export var yield_speed: float = 300.0
+
 var _target: Node2D
 var _target_pace: float = 0.0
 var _previous_target_position: Vector2 = Vector2.ZERO
@@ -44,10 +54,10 @@ func _ready() -> void:
 	else:
 		_previous_target_position = _target.global_position
 		if _target is PhysicsBody2D:
-			# They walk through one another. Without this she blocks him bodily —
-			# both are 6 px radius, so a path that runs through where she stands
-			# simply jams, and she will not step aside because she only closes in
-			# when he gets far away, which he then cannot do.
+			# No hard collision between the two of them: a path that runs through
+			# where she is standing would simply jam, and she will not move aside
+			# of her own accord while he is close. Instead she is nudged out of
+			# his way in _after_move(), which cannot wedge either of them.
 			add_collision_exception_with(_target)
 			(_target as PhysicsBody2D).add_collision_exception_with(self)
 
@@ -81,6 +91,37 @@ func _decide_direction() -> Vector2:
 
 ## His speed right now, measured from how far he actually moved rather than read
 ## off his velocity, so walking into a wall counts as standing still.
+## Steps out of his way when he walks into her. Uses move_and_collide so she is
+## still stopped by walls; if she is cornered and cannot give way, he simply
+## passes through rather than both of them jamming.
+func _after_move() -> void:
+	if _target == null:
+		return
+	var offset: Vector2 = global_position - _target.global_position
+	var gap: float = offset.length()
+	if gap >= personal_space:
+		return
+
+	# Standing exactly on top of one another has no meaningful direction to
+	# push along, so pick one rather than dividing by zero.
+	var away: Vector2 = offset / gap if gap > 0.01 else Vector2.RIGHT
+
+	# If he is walking into her, step aside rather than straight back: pushing
+	# along his heading just shoves her across the room ahead of him and he
+	# never gets past. Sidestep towards whichever side she already leans.
+	var his_heading: Vector2 = (_target as CharacterBody2D).velocity if _target is CharacterBody2D else Vector2.ZERO
+	if his_heading.length() > 1.0 and away.dot(his_heading.normalized()) > 0.3:
+		var heading: Vector2 = his_heading.normalized()
+		var sideways: Vector2 = Vector2(-heading.y, heading.x)
+		if sideways.dot(away) < 0.0:
+			sideways = -sideways
+		away = (away + sideways * 2.0).normalized()
+
+	var overlap: float = personal_space - gap
+	var step: float = minf(overlap, yield_speed * get_physics_process_delta_time())
+	move_and_collide(away * step)
+
+
 func _measure_target_pace() -> void:
 	var delta: float = get_physics_process_delta_time()
 	if delta <= 0.0:

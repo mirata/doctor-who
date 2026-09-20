@@ -209,7 +209,7 @@ would need `NavigationLink2D`.
 - **Characters must not block each other.** Sarah adds a mutual collision
   exception with the Doctor in `_ready()`. Without it she blocks him bodily and
   neither can resolve it: he cannot get past, and she only moves once he is far
-  away.
+  away. She keeps out of his way in `_after_move()` instead — see below.
 - **After editing the outline, check for islands** — a walkable patch cut off
   from the rest strands whoever clicks on it. Path from the spawn to a grid of
   mesh points and confirm every one is reachable.
@@ -238,6 +238,28 @@ gives the burst distinct gears rather than a sliding speed.
 | `catch_up_gain` | 2.0 | Extra speed per pixel she is behind — this is the burst |
 | `max_speed` | 240 | Ceiling on the burst |
 | `repath_distance` | 20 px | How far he moves before she re-routes |
+| `personal_space` | 14 px | How close he gets before she gives way |
+| `yield_speed` | 300 | Ceiling on how fast she is shouldered aside |
+
+#### Giving way rather than colliding
+There is **no hard collision between the two of them** — that is what guarantees
+he can never be wedged against her, and it is verified by checking that none of
+his slide collisions are ever her. Instead, `_after_move()` nudges *her* out of
+*his* way whenever he comes within `personal_space`, using `move_and_collide` so
+walls still stop her.
+
+Two things this got wrong on the way, both worth keeping in mind if it is
+retuned:
+
+- **The yield ceiling must stay well above walking speed.** At 90 px/s against
+  his 120 he simply outran her giving way and passed straight through.
+- **She sidesteps, she does not back away.** Pushing her directly along his
+  heading just shoves her across the room ahead of him and he never gets past;
+  the push is biased perpendicular to his heading, towards whichever side she
+  already leans.
+
+If she is cornered and cannot give way, he passes through her. That is the
+deliberate fallback: a visual overlap for a moment beats a stuck player.
 
 Measured over a long straight walk: she settles to a constant gap of ~100 px
 (2.6 m) with **zero** swing, moving at his exact speed, and closes to precisely
@@ -461,7 +483,9 @@ so `TomBaker.offset = Vector2(0, -26)` still plants him on the floor correctly.
 | `TARDISAmbient` (AudioStreamPlayer) | `audio/console/console-ambient.mp3` | Autoplay, −19.5 dB background loop |
 | `ConsoleSounds` (AudioStreamPlayer2D) | `audio/console/console1-9.mp3` | Random pick every 5–20 s via Timer |
 
-`console_sounds.gd` creates its own `Timer` child in `_ready()` — do not add a Timer node manually in the scene.
+`console_sounds.gd` creates its own `Timer` child in `_ready()` — do not add a Timer node manually in the scene. The gap between noises is `min_interval`/`max_interval` on that node (20–55 s).
+
+Footstep volume is `footsteps_volume_db` on the player (−30 dB); the player builds its own `AudioStreamPlayer` in `_ready()`, so there is no node to select in the scene.
 
 `audio/characters/footsteps.mp3` exists but is **not yet wired up**.
 

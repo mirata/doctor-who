@@ -11,7 +11,7 @@ extends Character
 @export var interact_distance: float = 34.0
 
 @export_category("Audio")
-@export var footsteps_volume_db: float = -20.0
+@export var footsteps_volume_db: float = -30.0
 @export var footsteps_pitch: float = 1.0
 
 var _footsteps: AudioStreamPlayer

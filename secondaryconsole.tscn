@@ -28,7 +28,7 @@ radius = 6.99909
 height = 39.994843
 
 [sub_resource type="RectangleShape2D" id="DoorTriggerShape"]
-size = Vector2(46, 129)
+size = Vector2(46, 97)
 
 [node name="Node2D" type="Node2D" unique_id=1321346854 groups=["navigation_source"]]
 
@@ -38,10 +38,10 @@ position = Vector2(184, -32)
 texture = ExtResource("2_4g668")
 
 [node name="Player" parent="." unique_id=1129073650 instance=ExtResource("2_wu3u7")]
-position = Vector2(89, -51)
+position = Vector2(145, 15)
 
 [node name="Sarah" parent="." unique_id=1759344720 instance=ExtResource("4_lg8da")]
-position = Vector2(103, -39)
+position = Vector2(220, 14)
 
 [node name="Block" type="StaticBody2D" parent="." unique_id=1087156717]
 position = Vector2(-633, 565)
@@ -233,7 +233,7 @@ polygon = PackedVector2Array(75, -147, 109, -130, 150, -127, 184.02646, -133.188
 [node name="CollisionPolygon2D7" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=621529931]
 position = Vector2(136.89473, -22.60644)
 scale = Vector2(0.2469798, 0.24697985)
-polygon = PackedVector2Array(-1019, 558, -1017, 268, -639, 69, -435.3719, -30.647781, -429, -124, -404, -141, -243, -57, -163, 71, -163, 103, -179, 113, -206, 103, -252, 128, -300.68762, 105.763794, -349, 127, -368, 119, -350, 108, -401, 83, -420, 54, -438, 46, -459, 58, -464, 74, -521, 104, -229, 268, -394, 456, -404, 452, -364, 387, -456, 336, -457, 363, -591, 435, -676, 386)
+polygon = PackedVector2Array(-1019, 558, -1017, 268, -639, 69, -435.3719, -30.647781, -429, -124, -396.3673, -151.40327, -258.70425, -82.57175, -163, 71, -163, 103, -179, 113, -206, 103, -252, 128, -300.68762, 105.763794, -349, 127, -368, 119, -350, 108, -401, 83, -420, 54, -438, 46, -459, 58, -464, 74, -521, 104, -229, 268, -394, 456, -404, 452, -364, 387, -456, 336, -457, 363, -591, 435, -676, 386)
 
 [node name="CollisionPolygon2D9" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=860230877]
 position = Vector2(160.02469, -7.501267)
@@ -271,7 +271,7 @@ script = ExtResource("door_script")
 target_scene = "uid://bw37erkyn7wcg"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger" unique_id=900000002]
-position = Vector2(-296, -160.5)
+position = Vector2(-296, -176.5)
 shape = SubResource("DoorTriggerShape")
 
 [node name="Sounds" type="Node2D" parent="." unique_id=697774377]
@@ -289,5 +289,6 @@ panning_strength = 1.4
 script = ExtResource("20_1taa0")
 
 [node name="Navigation" type="NavigationRegion2D" parent="." unique_id=672946817]
+visible = false
 navigation_polygon = ExtResource("23_kshtc")
 script = ExtResource("24_a7f0f")
