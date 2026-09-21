@@ -1,0 +1,1957 @@
+{
+  "art_tile_size": [
+    96,
+    48
+  ],
+  "art_cell_size": [
+    96,
+    144
+  ],
+  "sub": 4,
+  "grid_tile_size": [
+    24,
+    12
+  ],
+  "quarter_art_cell": [
+    24,
+    36
+  ],
+  "floor_names": [
+    "cobble_a",
+    "cobble_b",
+    "cobble_c",
+    "cobble_cracked",
+    "cobble_puddle",
+    "cobble_manhole",
+    "flagstone_a",
+    "flagstone_b",
+    "flagstone_crack",
+    "flagstone_drain",
+    "road_a",
+    "road_b",
+    "road_patch",
+    "road_puddle",
+    "gutter",
+    "dirt"
+  ],
+  "floor_cell": [
+    96,
+    48
+  ],
+  "kerb_cell": [
+    96,
+    64
+  ],
+  "kerbs": {
+    "kerb": [
+      0,
+      0
+    ],
+    "kerb_worn": [
+      1,
+      0
+    ],
+    "kerb_gutter": [
+      2,
+      0
+    ],
+    "kerb_weeds": [
+      3,
+      0
+    ],
+    "kerb_dropped": [
+      4,
+      0
+    ],
+    "kerb_corner": [
+      5,
+      0
+    ],
+    "kerb_tall": [
+      6,
+      0
+    ],
+    "step": [
+      7,
+      0
+    ],
+    "step_worn": [
+      0,
+      1
+    ]
+  },
+  "floors": {
+    "cobble_a": [
+      0,
+      0
+    ],
+    "cobble_b": [
+      1,
+      0
+    ],
+    "cobble_c": [
+      2,
+      0
+    ],
+    "cobble_cracked": [
+      3,
+      0
+    ],
+    "cobble_puddle": [
+      4,
+      0
+    ],
+    "cobble_manhole": [
+      5,
+      0
+    ],
+    "flagstone_a": [
+      6,
+      0
+    ],
+    "flagstone_b": [
+      7,
+      0
+    ],
+    "flagstone_crack": [
+      0,
+      1
+    ],
+    "flagstone_drain": [
+      1,
+      1
+    ],
+    "road_a": [
+      2,
+      1
+    ],
+    "road_b": [
+      3,
+      1
+    ],
+    "road_patch": [
+      4,
+      1
+    ],
+    "road_puddle": [
+      5,
+      1
+    ],
+    "gutter": [
+      6,
+      1
+    ],
+    "dirt": [
+      7,
+      1
+    ],
+    "blank": [
+      0,
+      2
+    ]
+  },
+  "panel_cell": [
+    96,
+    162
+  ],
+  "panel_height": 112,
+  "panel_rise": 48,
+  "panels": {
+    "plain_l": [
+      0,
+      0
+    ],
+    "plain_r": [
+      1,
+      0
+    ],
+    "plain_b_l": [
+      0,
+      1
+    ],
+    "plain_b_r": [
+      1,
+      1
+    ],
+    "windows_l": [
+      0,
+      2
+    ],
+    "windows_r": [
+      1,
+      2
+    ],
+    "window_plain_l": [
+      0,
+      3
+    ],
+    "window_plain_r": [
+      1,
+      3
+    ],
+    "plain_window_l": [
+      0,
+      4
+    ],
+    "plain_window_r": [
+      1,
+      4
+    ],
+    "window_lit_l": [
+      0,
+      5
+    ],
+    "window_lit_r": [
+      1,
+      5
+    ],
+    "window_out_l": [
+      0,
+      6
+    ],
+    "window_out_r": [
+      1,
+      6
+    ],
+    "window_pipe_l": [
+      0,
+      7
+    ],
+    "window_pipe_r": [
+      1,
+      7
+    ],
+    "poster_l": [
+      0,
+      8
+    ],
+    "poster_r": [
+      1,
+      8
+    ],
+    "sign_l": [
+      0,
+      9
+    ],
+    "sign_r": [
+      1,
+      9
+    ],
+    "vent_l": [
+      0,
+      10
+    ],
+    "vent_r": [
+      1,
+      10
+    ],
+    "pipe_l": [
+      0,
+      11
+    ],
+    "pipe_r": [
+      1,
+      11
+    ],
+    "g_plain_l": [
+      0,
+      12
+    ],
+    "g_plain_r": [
+      1,
+      12
+    ],
+    "g_door_l": [
+      0,
+      13
+    ],
+    "g_door_r": [
+      1,
+      13
+    ],
+    "g_door_win_l": [
+      0,
+      14
+    ],
+    "g_door_win_r": [
+      1,
+      14
+    ],
+    "g_windows_l": [
+      0,
+      15
+    ],
+    "g_windows_r": [
+      1,
+      15
+    ],
+    "g_shop_l": [
+      0,
+      16
+    ],
+    "g_shop_r": [
+      1,
+      16
+    ],
+    "g_shopdoor_l": [
+      0,
+      17
+    ],
+    "g_shopdoor_r": [
+      1,
+      17
+    ],
+    "g_door_pipe_l": [
+      0,
+      18
+    ],
+    "g_door_pipe_r": [
+      1,
+      18
+    ],
+    "g_stone_l": [
+      0,
+      19
+    ],
+    "g_stone_r": [
+      1,
+      19
+    ],
+    "quoin_l": [
+      0,
+      20
+    ],
+    "quoin_r": [
+      1,
+      20
+    ]
+  },
+  "quarter_art": {
+    "q_wall_a": {
+      "atlas": [
+        0,
+        0
+      ],
+      "kind": "block"
+    },
+    "q_wall_a_low": {
+      "atlas": [
+        1,
+        0
+      ],
+      "kind": "block"
+    },
+    "q_wall_b": {
+      "atlas": [
+        2,
+        0
+      ],
+      "kind": "block"
+    },
+    "q_wall_b_low": {
+      "atlas": [
+        3,
+        0
+      ],
+      "kind": "block"
+    }
+  },
+  "grid": {
+    "decal_paper_a@00": {
+      "atlas": [
+        0,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@01": {
+      "atlas": [
+        1,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        0,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@02": {
+      "atlas": [
+        2,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        0,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@03": {
+      "atlas": [
+        3,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        0,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@10": {
+      "atlas": [
+        4,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        1,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@11": {
+      "atlas": [
+        5,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        1,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@12": {
+      "atlas": [
+        6,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        1,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@13": {
+      "atlas": [
+        7,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        1,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@20": {
+      "atlas": [
+        8,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        2,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@21": {
+      "atlas": [
+        9,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        2,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@22": {
+      "atlas": [
+        10,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        2,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@23": {
+      "atlas": [
+        11,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        2,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@30": {
+      "atlas": [
+        12,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        3,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@31": {
+      "atlas": [
+        13,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        3,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@32": {
+      "atlas": [
+        14,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        3,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_a@33": {
+      "atlas": [
+        15,
+        0
+      ],
+      "parent": "decal_paper_a",
+      "sub": [
+        3,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@00": {
+      "atlas": [
+        0,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@01": {
+      "atlas": [
+        1,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        0,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@02": {
+      "atlas": [
+        2,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        0,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@03": {
+      "atlas": [
+        3,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        0,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@10": {
+      "atlas": [
+        4,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        1,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@11": {
+      "atlas": [
+        5,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        1,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@12": {
+      "atlas": [
+        6,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        1,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@13": {
+      "atlas": [
+        7,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        1,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@20": {
+      "atlas": [
+        8,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        2,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@21": {
+      "atlas": [
+        9,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        2,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@22": {
+      "atlas": [
+        10,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        2,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@23": {
+      "atlas": [
+        11,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        2,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@30": {
+      "atlas": [
+        12,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        3,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@31": {
+      "atlas": [
+        13,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        3,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@32": {
+      "atlas": [
+        14,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        3,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_paper_b@33": {
+      "atlas": [
+        15,
+        1
+      ],
+      "parent": "decal_paper_b",
+      "sub": [
+        3,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@00": {
+      "atlas": [
+        0,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@01": {
+      "atlas": [
+        1,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        0,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@02": {
+      "atlas": [
+        2,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        0,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@03": {
+      "atlas": [
+        3,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        0,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@10": {
+      "atlas": [
+        4,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        1,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@11": {
+      "atlas": [
+        5,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        1,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@12": {
+      "atlas": [
+        6,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        1,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@13": {
+      "atlas": [
+        7,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        1,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@20": {
+      "atlas": [
+        8,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        2,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@21": {
+      "atlas": [
+        9,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        2,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@22": {
+      "atlas": [
+        10,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        2,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@23": {
+      "atlas": [
+        11,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        2,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@30": {
+      "atlas": [
+        12,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        3,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@31": {
+      "atlas": [
+        13,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        3,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@32": {
+      "atlas": [
+        14,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        3,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_litter@33": {
+      "atlas": [
+        15,
+        2
+      ],
+      "parent": "decal_litter",
+      "sub": [
+        3,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@00": {
+      "atlas": [
+        0,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@01": {
+      "atlas": [
+        1,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        0,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@02": {
+      "atlas": [
+        2,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        0,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@03": {
+      "atlas": [
+        3,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        0,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@10": {
+      "atlas": [
+        4,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        1,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@11": {
+      "atlas": [
+        5,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        1,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@12": {
+      "atlas": [
+        6,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        1,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@13": {
+      "atlas": [
+        7,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        1,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@20": {
+      "atlas": [
+        8,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        2,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@21": {
+      "atlas": [
+        9,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        2,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@22": {
+      "atlas": [
+        10,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        2,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@23": {
+      "atlas": [
+        11,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        2,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@30": {
+      "atlas": [
+        12,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        3,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@31": {
+      "atlas": [
+        13,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        3,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@32": {
+      "atlas": [
+        14,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        3,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_a@33": {
+      "atlas": [
+        15,
+        3
+      ],
+      "parent": "decal_grime_a",
+      "sub": [
+        3,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@00": {
+      "atlas": [
+        0,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@01": {
+      "atlas": [
+        1,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        0,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@02": {
+      "atlas": [
+        2,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        0,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@03": {
+      "atlas": [
+        3,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        0,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@10": {
+      "atlas": [
+        4,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        1,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@11": {
+      "atlas": [
+        5,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        1,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@12": {
+      "atlas": [
+        6,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        1,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@13": {
+      "atlas": [
+        7,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        1,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@20": {
+      "atlas": [
+        8,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        2,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@21": {
+      "atlas": [
+        9,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        2,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@22": {
+      "atlas": [
+        10,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        2,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@23": {
+      "atlas": [
+        11,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        2,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@30": {
+      "atlas": [
+        12,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        3,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@31": {
+      "atlas": [
+        13,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        3,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@32": {
+      "atlas": [
+        14,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        3,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_grime_b@33": {
+      "atlas": [
+        15,
+        4
+      ],
+      "parent": "decal_grime_b",
+      "sub": [
+        3,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@00": {
+      "atlas": [
+        0,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@01": {
+      "atlas": [
+        1,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        0,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@02": {
+      "atlas": [
+        2,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        0,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@03": {
+      "atlas": [
+        3,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        0,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@10": {
+      "atlas": [
+        4,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        1,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@11": {
+      "atlas": [
+        5,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        1,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@12": {
+      "atlas": [
+        6,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        1,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@13": {
+      "atlas": [
+        7,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        1,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@20": {
+      "atlas": [
+        8,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        2,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@21": {
+      "atlas": [
+        9,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        2,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@22": {
+      "atlas": [
+        10,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        2,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@23": {
+      "atlas": [
+        11,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        2,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@30": {
+      "atlas": [
+        12,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        3,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@31": {
+      "atlas": [
+        13,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        3,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@32": {
+      "atlas": [
+        14,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        3,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_stain@33": {
+      "atlas": [
+        15,
+        5
+      ],
+      "parent": "decal_stain",
+      "sub": [
+        3,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@00": {
+      "atlas": [
+        0,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@01": {
+      "atlas": [
+        1,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        0,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@02": {
+      "atlas": [
+        2,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        0,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@03": {
+      "atlas": [
+        3,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        0,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@10": {
+      "atlas": [
+        4,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        1,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@11": {
+      "atlas": [
+        5,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        1,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@12": {
+      "atlas": [
+        6,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        1,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@13": {
+      "atlas": [
+        7,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        1,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@20": {
+      "atlas": [
+        8,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        2,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@21": {
+      "atlas": [
+        9,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        2,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@22": {
+      "atlas": [
+        10,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        2,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@23": {
+      "atlas": [
+        11,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        2,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@30": {
+      "atlas": [
+        12,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        3,
+        0
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@31": {
+      "atlas": [
+        13,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        3,
+        1
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@32": {
+      "atlas": [
+        14,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        3,
+        2
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "decal_scatter@33": {
+      "atlas": [
+        15,
+        6
+      ],
+      "parent": "decal_scatter",
+      "sub": [
+        3,
+        3
+      ],
+      "walkable": false,
+      "solid": false,
+      "layer": "decal"
+    },
+    "collision": {
+      "atlas": [
+        0,
+        7
+      ],
+      "parent": "collision",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": false,
+      "solid": true,
+      "layer": "collision"
+    },
+    "walkable": {
+      "atlas": [
+        1,
+        7
+      ],
+      "parent": "walkable",
+      "sub": [
+        0,
+        0
+      ],
+      "walkable": true,
+      "solid": false,
+      "layer": "walkable"
+    }
+  }
+}

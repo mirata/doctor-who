@@ -5,6 +5,7 @@ var _static: Array = []
 var _movable: Array = []
 
 var _static_deps: Dictionary = {}
+var _static_dirty: bool = false
 
 var _dfs_color: Dictionary = {}
 var _dfs_parent: Dictionary = {}
@@ -29,18 +30,28 @@ func register_sorter(sorter: IsoSorter) -> void:
 		if not sorter in _static:
 			_static.append(sorter)
 			(sorter.get_parent() as CanvasItem).z_as_relative = false
-			_rebuild_static_deps()
+			# Rebuild ONCE, on the next frame, rather than per registration.
+			# The rebuild is O(n^2), so doing it as each sorter arrives makes
+			# loading a scene O(n^3): a level with 190 static sorters spent two
+			# full seconds inside add_child before this was deferred.
+			_static_dirty = true
 
 
 func unregister_sorter(sorter: IsoSorter) -> void:
 	_floor.erase(sorter)
-	_static.erase(sorter)
+	if sorter in _static:
+		_static.erase(sorter)
+		_static_dirty = true
 	_movable.erase(sorter)
 	_static_deps.erase(sorter)
 	_rebuild_static_deps()
 
 
 func _process(_delta: float) -> void:
+	if _static_dirty:
+		_rebuild_static_deps()
+		_static_dirty = false
+
 	for i in _floor.size():
 		_set_z(_floor[i], Z_FLOOR_BASE + i)
 
@@ -152,6 +163,17 @@ static func _compare_point_pts(point: Vector2, pts: Array) -> int:
 
 	var pa: Vector2 = pts[best_seg]
 	var pb: Vector2 = pts[best_seg + 1]
+
+	# Outside the segment's span the object has no footprint, so following its
+	# line any further makes it claim depth it does not have: a character
+	# standing well past the end of a short wall gets judged "behind" it and is
+	# drawn through. Compare against the nearer end instead.
+	var lo_x := min(pa.x, pb.x)
+	var hi_x := max(pa.x, pb.x)
+	if point.x < lo_x or point.x > hi_x:
+		var end: Vector2 = pa if abs(point.x - pa.x) <= abs(point.x - pb.x) else pb
+		return 1 if point.y > end.y else -1
+
 	if abs(pb.x - pa.x) < 0.001:
 		return 1 if point.y > (pa.y + pb.y) * 0.5 else -1
 	var slope := (pb.y - pa.y) / (pb.x - pa.x)

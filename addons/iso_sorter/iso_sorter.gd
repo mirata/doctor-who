@@ -18,6 +18,27 @@ enum SortType { POINT, LINE }
 @export var sort_offsets: Array[Vector2] = [Vector2.ZERO, Vector2(50, 0)]
 
 @export_group("Behavior")
+## Turn off in scenes that sort by Y instead — a regular tile grid does not need
+## topological sorting, and this writing z_index every frame would override it.
+## Honoured whenever it is set, not just at _ready, so a level can stand its
+## characters' sorters down after they have already registered.
+@export var enabled: bool = true:
+	set(value):
+		enabled = value
+		if Engine.is_editor_hint() or not is_inside_tree():
+			return
+		var mgr = _manager()
+		if mgr == null:
+			return
+		if enabled:
+			mgr.register_sorter(self)
+		else:
+			mgr.unregister_sorter(self)
+			# Hand the parent back to whatever sorting the scene does use.
+			var p = get_parent()
+			if p is CanvasItem:
+				(p as CanvasItem).z_index = 0
+				(p as CanvasItem).z_as_relative = true
 ## Set true for sprites that move at runtime (player, enemies). Static sprites are cheaper.
 @export var is_movable: bool = false
 ## Always render behind everything else (use for floor tiles).
@@ -32,7 +53,7 @@ func _validate_property(property: Dictionary) -> void:
 
 
 func _ready() -> void:
-	if Engine.is_editor_hint():
+	if Engine.is_editor_hint() or not enabled:
 		return
 	var mgr = _manager()
 	if mgr:

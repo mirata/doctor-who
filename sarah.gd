@@ -43,6 +43,7 @@ var _target: Node2D
 var _target_pace: float = 0.0
 var _previous_target_position: Vector2 = Vector2.ZERO
 var _walk_speed: float = 0.0
+var _gave_up_near: Vector2 = Vector2.INF
 
 func _ready() -> void:
 	if not follow_target_path.is_empty():
@@ -85,9 +86,25 @@ func _decide_direction() -> Vector2:
 	if _walk_speed <= 0.0:
 		return Vector2.ZERO
 
+	# Having given up on a route, wait where she is rather than immediately
+	# asking for the same one again - she would re-wedge on the same corner
+	# every `stuck_seconds` and walk on the spot between tries. Once he has
+	# moved on, the route is a different one and worth attempting.
+	if _gave_up_near != Vector2.INF:
+		if _target.global_position.distance_to(_gave_up_near) < repath_distance * 2.0:
+			return Vector2.ZERO
+		_gave_up_near = Vector2.INF
+
 	if not has_destination() or get_destination().distance_to(_target.global_position) > repath_distance:
 		set_destination(_target.global_position)
 	return direction_to_destination()
+
+
+## Where he was standing when she last gave up, so she can tell whether trying
+## again would mean anything different.
+func _on_stuck() -> void:
+	super._on_stuck()
+	_gave_up_near = _target.global_position if _target != null else Vector2.INF
 
 ## His speed right now, measured from how far he actually moved rather than read
 ## off his velocity, so walking into a wall counts as standing still.

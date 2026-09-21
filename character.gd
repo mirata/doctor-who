@@ -26,9 +26,19 @@ enum State {
 ## How close counts as having arrived at a destination.
 @export var arrive_distance: float = 4.0
 
+@export_category("Getting stuck")
+## How long a character may make no headway toward a destination before giving
+## up on it. Only applies to navigation - holding a direction against a wall is
+## the player's business, and they can see what is happening.
+@export var stuck_seconds: float = 0.6
+## How far counts as headway.
+@export var stuck_distance: float = 2.0
+
 var _destination: Vector2 = Vector2.ZERO
 var _has_destination: bool = false
 var _pathfinding: bool = false
+var _no_progress_for: float = 0.0
+var _progress_mark: Vector2 = Vector2.ZERO
 
 var state: State = State.IDLE
 var move_direction: Vector2 = Vector2.ZERO
@@ -50,9 +60,38 @@ func movement_loop() -> void:
 	set_velocity(motion)
 	move_and_slide()
 	_after_move()
+	_check_progress()
 
 	_drive_animation()
 	_update_state(motion)
+
+## Gives up on a destination that is not being reached.
+##
+## Without this a character wedged on a corner keeps steering into it forever,
+## walking on the spot: the path says "that way", the collision says no, and
+## nothing notices the two disagree. Measured against actual travel rather than
+## against the path, so sliding along a wall toward the goal still counts.
+func _check_progress() -> void:
+	if not _has_destination or move_direction == Vector2.ZERO:
+		_no_progress_for = 0.0
+		_progress_mark = global_position
+		return
+	if _progress_mark.distance_to(global_position) >= stuck_distance:
+		_no_progress_for = 0.0
+		_progress_mark = global_position
+		return
+	_no_progress_for += get_physics_process_delta_time()
+	if _no_progress_for >= stuck_seconds:
+		_no_progress_for = 0.0
+		_progress_mark = global_position
+		_on_stuck()
+
+
+## What to do when a destination cannot be reached. The default is to stop
+## trying, which also stops the walk animation, since that follows intent.
+func _on_stuck() -> void:
+	clear_destination()
+
 
 ## Called once this character has moved for the frame. Override for anything
 ## that adjusts position rather than heading, such as keeping out of someone's
@@ -76,14 +115,21 @@ func _drive_animation() -> void:
 	animation_tree.set("parameters/Idle/blend_position", last_facing)
 	animation_tree.set("parameters/Run/blend_position", last_facing)
 
-	var idle: bool = velocity == Vector2.ZERO
+	# Walking is about INTENT, not about making progress. `velocity` after
+	# move_and_slide is the resolved motion, and sliding along a wall built of
+	# 24x12 collision diamonds resolves to zero on some frames and not others -
+	# which read as the idle frame gliding along, with the facing flickering as
+	# the tangent flipped sign. Someone pressed against a wall is still walking.
+	# Getting nowhere is handled by giving up on the destination instead, so the
+	# intent goes away and this follows.
+	var idle: bool = move_direction == Vector2.ZERO
 	animation_tree.set("parameters/conditions/Idle", idle)
 	animation_tree.set("parameters/conditions/Run", !idle)
 
 	# The sheet only holds right-facing frames; left is a flip. Only updated
-	# while actually moving horizontally, so the facing holds at rest.
-	if (state == State.IDLE or state == State.RUN) and velocity.x != 0:
-		sprite.flip_h = velocity.x < 0
+	# while actually heading somewhere, so the facing holds at rest.
+	if (state == State.IDLE or state == State.RUN) and move_direction.x != 0.0:
+		sprite.flip_h = move_direction.x < 0.0
 
 func _update_state(motion: Vector2) -> void:
 	if motion != Vector2.ZERO and state == State.IDLE:
@@ -106,6 +152,8 @@ func _on_stopped_walking() -> void:
 func set_destination(world_position: Vector2) -> void:
 	_destination = world_position
 	_has_destination = true
+	_no_progress_for = 0.0
+	_progress_mark = global_position
 	_sync_agent_target()
 
 ## Points the navigation agent at the current destination, if the room has a
@@ -158,6 +206,7 @@ func has_destination() -> bool:
 func clear_destination() -> void:
 	_has_destination = false
 	_pathfinding = false
+	_no_progress_for = 0.0
 
 ## The current destination as asked for, which may be off the navigation mesh.
 func get_destination() -> Vector2:

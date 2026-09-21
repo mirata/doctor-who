@@ -28,7 +28,7 @@ radius = 6.99909
 height = 39.994843
 
 [sub_resource type="RectangleShape2D" id="DoorTriggerShape"]
-size = Vector2(46, 97)
+size = Vector2(34, 40)
 
 [node name="Node2D" type="Node2D" unique_id=1321346854 groups=["navigation_source"]]
 
@@ -233,7 +233,7 @@ polygon = PackedVector2Array(75, -147, 109, -130, 150, -127, 184.02646, -133.188
 [node name="CollisionPolygon2D7" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=621529931]
 position = Vector2(136.89473, -22.60644)
 scale = Vector2(0.2469798, 0.24697985)
-polygon = PackedVector2Array(-1019, 558, -1017, 268, -639, 69, -435.3719, -30.647781, -429, -124, -396.3673, -151.40327, -258.70425, -82.57175, -163, 71, -163, 103, -179, 113, -206, 103, -252, 128, -300.68762, 105.763794, -349, 127, -368, 119, -350, 108, -401, 83, -420, 54, -438, 46, -459, 58, -464, 74, -521, 104, -229, 268, -394, 456, -404, 452, -364, 387, -456, 336, -457, 363, -591, 435, -676, 386)
+polygon = PackedVector2Array(-1019, 558, -1017, 268, -639, 69, -435.3719, -30.647781, -429, -124, -392.31842, -155.45218, -258.70425, -82.57175, -163, 71, -163, 103, -179, 113, -206, 103, -252, 128, -300.68762, 105.763794, -349, 127, -368, 119, -350, 108, -401, 83, -420, 54, -438, 46, -459, 58, -464, 74, -521, 104, -229, 268, -394, 456, -404, 452, -364, 387, -456, 336, -457, 363, -591, 435, -676, 386)
 
 [node name="CollisionPolygon2D9" type="CollisionPolygon2D" parent="StaticBody2D" unique_id=860230877]
 position = Vector2(160.02469, -7.501267)
@@ -266,12 +266,11 @@ rotation = 1.5546695
 shape = SubResource("CapsuleShape2D_1jxqw")
 
 [node name="DoorTrigger" type="Area2D" parent="." unique_id=900000001]
-position = Vector2(355, 22)
+position = Vector2(60, -62)
 script = ExtResource("door_script")
-target_scene = "uid://bw37erkyn7wcg"
+target_scene = "res://levels/street.tscn"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger" unique_id=900000002]
-position = Vector2(-296, -176.5)
 shape = SubResource("DoorTriggerShape")
 
 [node name="Sounds" type="Node2D" parent="." unique_id=697774377]

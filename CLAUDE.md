@@ -34,7 +34,16 @@ cancels the current click destination.
 | File | Purpose |
 |------|---------|
 | `secondaryconsole.tscn` | Console room — layout, audio, Player instance |
-| `nerva.tscn` | Second room, reached through the DoorTrigger |
+| `levels/street.tscn` | London street, built from tiles — reached through the DoorTrigger |
+| `scene_door.gd` | `Area2D` that fades to `target_scene` when a body enters |
+| `levels/street_tileset.tres` | The street `TileSet`: collision + navigation per tile |
+| `sprites/street/ASSETS.md` | **What to paint** — every sheet, its cell size and anchor |
+| `sprites/street/floors.png` | 96x48 floor diamonds |
+| `sprites/street/kerbs.png` | 96x64 kerbs (a floor tile plus a lip) |
+| `sprites/street/walls.png` | 96x162 wall panels, one storey of one face |
+| `sprites/street/props/` | free-standing objects, sized by their own artwork |
+| `sprites/street/TILESET.md` | Measurements and the original grid analysis |
+| `nerva.tscn` | Superseded by the street; kept but no longer linked |
 | `character.gd` | **`Character` base class** — movement, pathfinding, animation, idle/run state |
 | `camera_follow.gd` | Camera that gives on acceleration but locks at constant speed |
 | `dialogue/*.dialogue` | Conversations, in Dialogue Manager's script format |
@@ -99,6 +108,38 @@ Both characters use the **same** `character_animations.tres` and
 `Sprite` — the base finds it by type, and the animation tracks address it as
 `Sprite:frame`. A character whose sprite node is named anything else will not
 animate.
+
+### Walking is intent, not progress
+`move_direction` drives the animation, **not** `velocity`. After
+`move_and_slide`, `velocity` is the *resolved* motion, and sliding along a wall
+built of 24x12 collision diamonds resolves to zero on some frames and not
+others: the character glides along in the idle frame while `flip_h`, taken from
+`velocity.x`, flickers as the tangent changes sign. Someone pressed against a
+wall is still walking. Measured holding a direction into a wall for 111 frames:
+**111 run, 0 idle, 0 facing flips**.
+
+The blend position was already taken from intent for the same reason; the idle
+condition and the flip now are too.
+
+### Giving up on a route
+Intent-driven animation needs something to end the intent, or a character
+wedged on a corner walks on the spot forever — the path says "that way", the
+collision says no, and nothing notices the two disagree.
+
+`Character._check_progress()` measures **actual travel**, not path progress, so
+sliding along a wall toward the goal still counts. After `stuck_seconds` (0.6)
+without covering `stuck_distance` (2 px) it calls `_on_stuck()`, which by
+default clears the destination — and since the animation follows intent, the
+character goes idle by itself. Measured: gives up after 0.58 s, idle 5 frames
+later.
+
+It applies to **navigation only**. Holding a direction against a wall is the
+player's business and they can see what is happening.
+
+> Sarah overrides `_on_stuck()`. Clearing her destination is not enough on its
+> own: she re-targets the Doctor the very next frame, so she would re-wedge on
+> the same corner every 0.6 s. She now waits where she is until he has moved
+> far enough that the route would be a different one.
 
 ### Pixel-grid movement
 
@@ -296,6 +337,595 @@ animation_tree.set("parameters/conditions/Run", !is_idle)
 
 ### Sprite flipping
 `Sprite.flip_h` is set only when `velocity.x != 0`, preserving the last horizontal facing during idle. The spritesheet only contains right-facing frames; left movement is handled by flipping.
+
+---
+
+## Tile levels
+
+`levels/street.tscn` is built from a `TileSet` rather than a painted backdrop.
+The full analysis behind the grid is in `sprites/street/TILESET.md`; the
+practical points:
+
+- **Two grids, split by job.** `tile_size` is a property of the **TileSet**,
+  not of the tilemap, so different layers can run at different resolutions.
+  The visible floor is back on **96x48**, which is the size a floor is
+  comfortable to author and to paint in the editor; navigation and collision
+  run on an invisible **24x12** layer underneath.
+- That is what reconciles "floors are handy large" with "detail needs to be
+  smaller", and it is better than stamping one big tile as 4x4 slices: painting
+  a big floor tile no longer forces a big navigation cell, and nobody has to
+  place sixteen pieces to lay one paving slab. 336 floor cells, 5376 nav cells.
+- **The two grids do not share an origin.** Godot puts a cell's *corner* on the
+  origin, so the centre of big cell (0,0) and the centre of the 4x4 of fine
+  cells it covers differ by `(-36, 0)`. The `Floor` layer's position is
+  **measured** from the two layers at build time rather than hard-coded — see
+  `_fine_centre_of_big()`.
+- `tools/make_tiles.py` slices each drawn floor by deciding every pixel's
+  sub-cell from its position in tile space. Drawing 4x4 overlapping masks
+  instead loses ~5% of pixels along the seams and the joins show; the analytic
+  partition is lossless (measured 0.27 mean colour difference, invisible).
+- **96x48 art tiles, 2:1 isometric** — the same projection the console room art
+  already uses, so tiles and hand-painted rooms mix freely. One tile is a
+  building **bay** — the spacing between window centres in the reference art —
+  rather than a person-sized square.
+- The tilesheet uses **96x144 cells with the footprint diamond in the bottom
+  48 px**, and every tile sets `texture_origin = (0, -48)` to lift the art so
+  that footprint lands on its cell. Blocks are just taller art in the same cell.
+- `tools/make_tiles.py` generates the sheet **and `tiles.json`**, which is the
+  single source of truth for tile names and whether each is walkable or solid.
+  `tools/build_street.gd` reads that file, so the two cannot drift apart — only
+  `TW`/`TH`/`CELL` still need keeping in step by hand.
+- `TILE_W`/`TILE_H` at the top of the generator drive cell size, block heights
+  and every pattern, so the whole set rescales from one value. Keep
+  `TILE_W = 2 * TILE_H`.
+- **Never bind a tile dimension as a default argument.** Python evaluates those
+  once at import, so `def diamond(cx, cy, w=TILE_W, h=TILE_H)` ignored
+  `at_size()` and drew every quarter-native tile at the big size — the kerbs
+  came out as blobs filling their cell, and 90 pixels of the floor sheet were
+  wrong. Resolve inside the body: `w = TILE_W if w is None else w`.
+
+### Sliced vs quarter-native art
+Both fill the same 4x4 of quarter cells, and which one a floor uses is what
+decides whether it *looks* large-tiled:
+
+| | drawn at | reads as |
+|---|---|---|
+| **Sliced** (`cobble_a`, `flagstone_b`, ...) | 96x48, then cut into 4x4 | big stones — the pattern is just cut up |
+| **Quarter-native** (`q_flag`, `q_cobble`, `q_road`, ...) | 24x12 | small stones, one per fine cell |
+
+`_stamp_floor()` picks between them by name: a name the grid catalogue holds on
+its own is quarter-native and gets `SUB x SUB` individually chosen tiles (from
+`QUARTER_FAMILY`, so neighbours vary); anything else is stamped as its slices.
+Changing a floor's look is one entry in `GROUND_KEY`. The street uses fine
+paving and big cobbles on purpose — the road wants large stones.
+
+### Thin walls
+`q_wall_a` / `q_wall_b` (plus `_low`) are quarter-sized brick walls, a quarter
+cell deep, for boundaries and partitions where a 96 px block is far too much.
+Placed as runs in `WALL_RUNS`, stepping in quarters:
+
+- **The two orientations are separate artwork.** `a` runs south-east, `b`
+  south-west. There is no rotating a sprite in this projection, so a run with
+  the wrong axis reads as a row of disconnected posts.
+- They are drawn with three faces — long face, end cap, top — because a single
+  quad at 24 px reads as a painted stripe rather than a wall.
+- A quarter cell only leaves **2 tile-heights** of headroom above the floor
+  diamond. Anything taller gets sheared off flat against the cell top.
+
+**`at_size()` must swap `U` along with `TILE_W`/`TILE_H`.** Heights are written
+in tile-heights, so leaving `U` at the big tile's 48 silently builds every
+quarter block four times too tall — which looks like "the low variant isn't
+working", because both get clipped to the same flat ceiling.
+
+### Placing a sprite on the tile grid
+Two helpers in the build script, and using the wrong one misaligns the art:
+
+| helper | for | anchors on |
+|---|---|---|
+| `_big_to_local()` | blocks, kerbs, props, characters, the door | the centre of a **big** cell |
+| `_quarter_to_local()` | thin walls — anything one fine cell in size | the centre of a **fine** cell |
+
+Both take big-cell coordinates and accept fractions; in `_quarter_to_local` a
+0.25 step is one fine cell, which is the convention the collision painting uses
+too, so a quarter sprite and its collision cannot disagree.
+
+**Godot places cell (0,0) with its CORNER on the origin, not its centre**, and a
+big cell spans `SUB x SUB` fine cells, so its centre sits `SUB-1` fine rows
+below the first of them. Together that is `(GRID.x / 2, ART.y / 2)` = **(12, 24)**
+— exactly the error left behind when the layers moved to the quarter grid and
+this helper kept computing `((x-y) * 48, (x+y) * 24)`.
+
+The symptom is worth recognising because it does not look like a placement bug:
+collision is painted on the tile grid and stays correct, so the *art* drifts off
+the geometry. You walk through walls you can see and collide with nothing you
+can, characters stand on top of blocks, and Y-sort compares the wrong row so
+occlusion inverts near anything solid. `_assert_alignment()` now checks both
+helpers against `layer.map_to_local()` on every build and prints loudly.
+
+Verified after the fix: 131 of 131 solid sprites stand on their own collision
+cell (the other 56 are kerbs, deliberately walkable, and free-standing props,
+which carry their own `StaticBody2D`), 0 walkable cells overlap a solid one, and
+**0 of 5712 frames** walking all eight directions from six spots ended inside
+solid geometry.
+
+### Wide, flat things cannot be Y-sorted
+**Y-sort judges a sprite by a single point, so it cannot express "wide but
+flat".** A kerb is 96 px of art sorting from its diamond centre, and its lip
+reaches 48 px either side of the y it is judged by — so a character standing on
+the pavement just *north* of that point is legitimately behind the kerb and
+still gets drawn over, with the kerb line cutting across their shins. Measured
+at big (6, 3.7): the kerbs at (6,4) and (7,4) sort 7 px and 31 px below him.
+
+Since a 4 px lip could only ever hide 4 px of a 96 px character, the answer is
+that it should not occlude at all — and a thing that never occludes and never
+sorts is exactly what a **tile** is. Kerbs are a `Kerbs` TileMapLayer at
+`z_index = -50`: above `Ground` (-100) and `Decals` (-99), below everything that
+walks. **`z_index` takes precedence over y-sorting**, so they are out of the
+contest by construction rather than by sorting them more cleverly.
+
+That also makes them paintable in the editor, and turns 48 `Sprite2D` nodes
+into one layer.
+
+Verified across 264 positions along both kerb lines (comparing z first, then y,
+the way the renderer does): kerbs draw over the player **0** times, while
+buildings and thin walls still do 212 times — those are tall enough that
+occluding is correct.
+
+Use `Props` (Y-sorted) only for things tall enough that hiding a character is
+the right answer. Anything flatter than it is wide belongs on a fixed
+`z_index`, and if it never occludes at all it should be a tile.
+
+#### Tiles taller than a cell need their own atlas source
+`texture_region_size` is per **source**, not per tileset, so a `TileSet` can mix
+cell sizes. Kerb art is 24x36 against a 24x12 grid, so it lives in source 1
+(`tiles_quarter.png`) with `texture_origin = (0, -12)` lifting the art so its
+footprint diamond lands on the cell instead of the middle of the region — the
+same offset the wall sprites use, `-(QUARTER_CELL.y - GRID.y) / 2`.
+
+This is the general way to make *any* block art into tiles. Only do it for
+things that must not occlude: `tiles.json` carries a `kind` per quarter tile,
+and the builder turns `kerb` into tiles while everything else stays a sprite.
+
+#### Quarter-native art needs its detail thinned out
+Two things that looked fine at 96x48 and were wrong at 24x12, both because
+there are now **16 tiles where there was one**:
+
+- **Roll variants per big cell, not per fine cell.** Rolling per tile scattered
+  weeds and chips sixteen times as thickly and the kerb read as speckled.
+- **Drop per-tile edge highlights.** `block()`'s `cap` lights the top-back
+  edges, which is right on one 96 px kerb and turns a run of quarter kerbs into
+  a lattice of light lines. `t_kerb(cap=False)` for the quarter set.
+
+Laid up in a grid the quarter kerbs are gap-free (measured: 0 transparent
+pixels inside the field) and show faces only at the outer boundary, which is
+what a continuous kerb should do.
+
+### Solid things have to be carved out of the navmesh
+Collision and navigation are independent: the paving stone under a wall is still
+a walkable tile, so without carving a character paths **straight into** the wall
+and grinds along it until it can slide past.
+
+`_carve_navigation()` runs last, after every solid thing is placed, and moves
+each cell under collision from `Ground` to `GroundBlocked` — a layer with
+`navigation_enabled = false`. Same art, same position, no navigation polygon.
+Duplicating every floor tile as a non-navigating twin would work too and doubles
+the tileset for nothing.
+
+Measured after: crossing a low wall walks 211 px against a 54 px straight line
+(it routes around the end), building interiors sit 59 px off-mesh, and all four
+pavement corners still reach each other — carving is the easiest way to
+accidentally strand part of a level, so re-check reachability after changing it.
+
+### Props are sprites, not tiles
+**A prop's size comes from its artwork, not from the tile grid.** That is what
+lets a 36 px bin stand on a 96 px floor tile.
+
+Anything free-standing — phone box, bins, skips, boxes, bike rack — is a
+`Sprite2D` under `Props`, placed at a tile cell plus a sub-tile nudge, with a
+small `StaticBody2D` circle at its foot sized to what it actually occupies. The
+artwork in `sprites/street/props/` was carved from the reference image, so the
+proportions are the reference's.
+
+> Drawing props as *tiles* was a mistake worth not repeating: a tile is 96 px
+> wide by definition, so every prop came out 96 px wide — a phone box at 96x134
+> instead of 40x86, a dustbin the size of a skip. The tile grid should only
+> govern the floor and the walls that follow it.
+
+The generated furniture is now drawn at its **own** footprint by `PROP_ART` /
+`write_props()` in the generator, which emits one PNG per object into
+`sprites/street/props/` beside the carved artwork. Heights already came from
+`REF` in pixels, so only the footprint width needed saying — a dustbin is 28 px
+across, a bollard 12, a skip 48.
+
+Cropping each to its ink means the bottom edge is the front of the base, which
+is the same anchor the carved props use, so `_place_props()` needs no special
+case for either kind.
+
+`at_size()` takes a `cell_h` for this: a phone box is 86 px tall on a 28 px
+footprint, far past the default `TILE_H * (1 + TALLEST)` headroom, and without
+it the art is sheared off at the cell top.
+
+**`BLOCK_KEY` is walls only.** Street furniture in the `BLOCKS` map comes out as
+a 96 px cube — crates and barrels laid that way were the size of a garden shed
+and sat on top of the correctly-sized props, hiding them. Anything that is not
+a building wall belongs in `PROPS`.
+
+A prop with `"blocks": 0` is scenery you walk past rather than an obstacle, and
+gets no `StaticBody2D` — a wall lamp, for instance.
+
+**Props carve navigation too.** They collide with a circle rather than a tile,
+so `_carve_prop()` takes the floor out from under each blocker, widened by the
+body radius since the navmesh is where a character's *centre* may go. Without
+it a character paths straight through a bin and grinds around it. Measured
+after: 100 cells carved under 24 blockers, and 132 of 132 sampled spots across
+both pavements and the road still reachable — carving near a prop is an easy
+way to strand a corner, so re-check after moving things.
+
+### Art the builder does not place
+Generating a variant does not place it. If something is drawn but never seen,
+check it against this list before assuming a bug:
+
+- **Big kerbs and steps** (`kerb_worn`, `kerb_gutter`, `kerb_corner`, `step`…) —
+  superseded by the quarter-native kerb tiles.
+- **Tile-sized blocks** (`crate`, `barrel`, `plinth`, `stone_blk`, `iron_blk`,
+  `brick_blk`) — spare parts for when a full 96 px cube is actually wanted.
+  They are deliberately not scattered as scenery; see `BLOCK_KEY` above.
+- **Decals** are placed by scanning for `layer == "decal"`, and thin walls by
+  building `q_wall_<axis>` at runtime, so neither appears as a literal in the
+  build script. They are in use.
+
+### Feature sizes come from the reference, in pixels
+`REF` at the top of `make_tiles.py` holds sizes measured off the reference art —
+brick course 8 px, window 32x52, door 32x64, cobble 16 px, paving slab 30 px —
+and the painters use those **in pixels**, not as fractions of a face.
+
+That distinction matters. Sized as fractions, a window drawn at "half the face"
+came out half the size of the reference's, and every change of tile size
+silently rescaled the architecture with it. In pixels, brick stays brick whether
+it is on a kerb or a two-storey wall, and the tile size can change again without
+redrawing anything.
+
+The tile width follows from the same measurement: a wall face spans `TILE_W / 2`,
+the reference's window bays sit ~45 px apart, so `TILE_W = 96` fits one window
+per tile with brick either side.
+
+### Scattering variants
+A letter in the level map names a **list** of tiles, and which one a cell gets is
+hashed from its coordinates — so a run of cobbles varies without hand-placing
+every stone, and a rebuild always produces the same street. Add a variant by
+adding it to the list; no map editing needed.
+
+**Decals are scattered procedurally**, not hand-placed: `_scatter_decals()`
+walks the floor and drops one on `DECAL_DENSITY` percent of cells, chosen by the
+same coordinate hash, so it is stable between rebuilds. They are the cheapest
+way to stop a tiled floor looking stamped.
+
+> A decal tile is *mostly transparent*, so the diamond clip must **intersect**
+> the existing alpha rather than replace it. `Image.putalpha(mask)` overwrites
+> it, which turns every unpainted pixel opaque black and paints black diamonds
+> across the floor.
+
+Current set: **51 tiles** — 16 floors, 28 blocks, 7 decals.
+
+- floors: cobble x3, cracked, puddle, manhole, flagstone x2, cracked, drain,
+  road x2, patch, puddle, gutter, dirt
+- kerbs and steps: kerb x5 plus corner and dropped, step x2
+- structure: plinth, stone, brick, crate, barrel, iron, brick wall, window,
+  door, poster, pipe, stone wall
+- obstacles: phone box, trash can x3, skip, bollard, postbox
+- decals: paper x2, litter, grime x2, stain, scatter
+
+The kerb lip is **4 px**, measured off the reference — a kerb is a lip you step
+over, not a step you climb, and at 12 px it read as the latter.
+
+### Tiles do not Y-sort against nodes
+**Anything that must occlude a character has to be a `Sprite2D`, not a tile.**
+Measured in 4.6: an identical wall placed as a `Sprite2D` sibling occludes the
+Doctor correctly, while the same wall as a tile draws *behind* him — and that
+holds whether he is a sibling of the `TileMapLayer` or a child of it, built that
+way or reparented at runtime. A Y-sorted `TileMapLayer` sorts its tiles among
+themselves; it does not merge them into the surrounding node sort.
+
+So the street splits the job like this:
+
+| Node | Visible | Grid | Job |
+|------|---------|------|-----|
+| `Floor` (`TileMapLayer`) | yes, `z −100` | 96x48 | the floor, art only |
+| `Nav` (`TileMapLayer`) | **no** | 24x12 | **navigation** |
+| `Blocks` (`TileMapLayer`) | **no** | 24x12 | **collision** |
+| `Decals` (`TileMapLayer`) | yes, `z −99` | 24x12 | litter and grime |
+| `Kerbs` (`TileMapLayer`) | yes, `z −50` | 24x12 | the kerb lip; never sorts |
+| `Walls` (`Node2D`) | yes | — | facade panels, `IsoSorter` LINE |
+| `Props` (`Node2D`) | yes | — | prop sprites, `IsoSorter` POINT |
+
+An invisible `TileMapLayer` still collides and still bakes navigation
+(`visible = false` does not touch either), which is what lets the fine grid do
+that work while the coarse one does the drawing.
+
+### The Blocks layer looks empty and still collides
+It is not empty — it is painted with a tile that has **no art**, on a layer with
+`visible = false`, and **hiding a `TileMapLayer` does not disable its physics**.
+It still builds collision bodies from the TileSet's physics layer. That is the
+whole arrangement: collision is painted once on an invisible layer while the
+art is drawn separately as wall sprites, because tiles do not Y-sort against
+nodes.
+
+The `collision` and `walkable` marker tiles are **tinted** (magenta and green)
+rather than blank, so ticking the layer's eye in the editor shows what is
+solid. Nothing is drawn in game because both layers ship hidden.
+
+**The scene is not the source.** `BLOCKS` in `tools/build_street.gd` is — one
+letter per 96x48 cell — and the next build overwrites anything edited by hand
+in the scene.
+
+The build prints a walkability map every run: one character per big cell,
+saying what is blocked and which of the four sources did it.
+
+### Collision comes from the BLOCKS map, not from the walls
+`_paint_collision()` marks **all `SUB x SUB` fine cells of every `BLOCKS` cell**
+solid. A building is solid across its whole footprint, not just along the face
+you can see — so you cannot walk behind a wall panel, because behind it is
+inside the building. The panels are decoration on a solid block; moving one
+does not move its collision, and the `BLOCKS` map is the thing to edit.
+
+Props add their own `StaticBody2D` circles, and `_paint_corner_nooks()` closes
+inside corners.
+
+### Getting between the two rooms
+| From | Trigger sits at | Goes to |
+|------|-----------------|---------|
+| Console room | the doorway in the **north-west** wall, world `(60, -62)` | the street |
+| Street | the **top-left (west) end**, big cell `(1.0, 2.6)` | the console room |
+
+Both are plain `Area2D` + `scene_door.gd`. Two things to keep true when moving
+either one, both checked after the last move:
+
+- **The trigger must be on the navmesh**, or click-to-move cannot reach it. The
+  console doorway measures 0 px off the mesh, 115 px and 7 hops from the
+  player's start.
+- **A spawn must not sit inside the opposite trigger**, or arriving bounces you
+  straight back. The street spawn is 96 px clear of the way home, which is why
+  the characters arrive at big `(3.0, 3.0)` rather than on the doorstep.
+
+The street's return point has **no artwork** — it is an invisible area on the
+pavement. A TARDIS sprite there is still to do.
+
+### Buildings are faces, not cubes
+A building is not a block with a top — it is the **wall faces** you can see,
+covered by panel sprites. One panel is `PANEL_BAYS` bays wide (a bay is 48 px,
+the reference's window spacing) and one storey tall, and they stack sideways
+into runs and upwards into storeys.
+
+Worked out once so it is not re-derived every time:
+
+| face | runs from | hidden by | consecutive faces join along |
+|------|-----------|-----------|------------------------------|
+| `l` | west vertex → south vertex | cell `(x, y+1)` | `+x` (down-right) |
+| `r` | south vertex → east vertex | cell `(x+1, y)` | `−y` (up-right) |
+
+`_spawn_facades()` finds runs of exposed faces, chops each into panels and
+stacks storeys. Nothing is authored per wall: the `BLOCKS` map says where the
+buildings are and the facades follow.
+
+**A panel must never be wider than the run it sits in.** Laying every run in
+whole `PANEL_BAYS` steps overruns any run that is not a multiple of it — a
+one-cell run got a two-bay panel, which carried on into the building and drew
+its *interior* face over anything standing in the corner. Runs are chopped with
+`min(bays, remaining)` and a short panel crops its art from the left, which is
+the start of the run for both facings. The build prints
+`covering N of N exposed faces` and says `MISMATCH` if the two ever disagree.
+
+**Only the south-west and south-east faces of anything are ever visible.** A
+building on the *near* side of the street therefore presents its back to the
+camera and stands between the camera and the pavement, so its wall occludes
+whoever is walking there — correctly, and disastrously: a single 112 px storey
+hides a 96 px character **outright**. Measured before the fix, the row-13
+panels covered 9156 px² of a 9216 px character box.
+
+So the near side draws **no facade at all** (`STOREYS_BY_BLOCK` maps it to 0)
+and is bounded by a knee-high `WALL_RUNS` wall instead, which stops you walking
+off without swallowing anyone. Its collision still comes from `BLOCKS`.
+
+**Rule of thumb: nothing on the near side of a walkable area may be taller than
+a character.** The far side can be as tall as you like.
+
+#### Panel variations are composed, not drawn
+A panel is a list of **bay** kinds, so "window + door" is a line in
+`PANEL_LAYOUTS` rather than a new painter. Bays live in `BAYS` and each one
+paints inside a `u` range. 20 layouts x 2 facings = 40 segments from about a
+dozen small painters, and adding "boarded window next to a vent" costs one
+line.
+
+Ground-floor layouts are prefixed `g_` and drawn in stone; upper storeys are
+brick. A string course caps every panel, which is what makes storeys stack
+without a visible join.
+
+Both facings are **separate artwork**. They are mirror images geometrically,
+but the two faces catch different light, so a flipped panel reads wrong.
+
+**The two facings slope opposite ways, and everything derived from the base has
+to follow the artwork.** An `r` base starts low at the south vertex and rises to
+the east vertex; an `l` base starts high at the west vertex and falls to the
+south vertex. `_panel_base()` returning one shape for both put the sort line
+across the grain of the picture *and* hung every `l` panel half its rise off the
+ground — the walls floated, with a black gap along their feet. Checked on every
+build: `41 of 41` panel bases land on the cell vertex they claim, sloping the
+way their facing does.
+
+#### Inside corners slice a character in half
+A walkable cell whose **south-east neighbour is a building** sits behind that
+building in depth, so the building correctly draws over anyone standing there.
+But a wall panel's left edge is a straight vertical line — the building's
+corner — so the character is cut cleanly down the middle rather than partly
+hidden. Measured at the alcove's east cell: **744 of 1494** pixels visible, and
+fully visible a quarter-cell west.
+
+The occlusion is right; *standing there* is what is wrong, and an inside corner
+of a recess has nothing in it anyway. `_paint_corner_nooks()` makes those cells
+solid. Only a recess can produce one — ordinary pavement has pavement to its
+south-east — so on this map it is exactly one cell.
+
+Measured over **233 standable positions**, comparing each character's visible
+pixels with the walls shown against with them hidden: one spot remains, with 31
+of 1494 pixels covered, which is a hairline along a corner rather than a slice.
+
+#### A stacked wall must sort as ONE object
+Every storey of a wall shares the same base line, so giving each its own
+`IsoSorter` makes the comparison return *equal* and the draw order fall back to
+registration order. That is invisible for an `r` wall, whose upper storey sits
+clear above a character — but an **`l` upper storey reaches down to
+`anchor.y − 63` while a character's head is at `anchor.y − 74`**. The 11 px
+overlap lands right across the hat and flickers as they walk.
+
+So storeys above the ground are **children of the ground panel**: one sort
+line, one `z_index`, and the whole wall draws together. `_spawn_wall()` builds
+the stack; only the ground panel gets a sorter.
+
+#### A wall's line stops at its ends
+`IsoSortingManager._compare_point_pts()` used to follow a LINE sorter's base
+*infinitely*, so a character standing past the end of a short wall was judged
+behind it and drawn through. The alcove's one-bay side wall runs
+`(300,240) → (348,216)`, slope −0.5; a character at x=290 is 10 px clear of its
+west end, but the extrapolated line put them exactly on it — which is why it
+flickered rather than failing consistently.
+
+The comparison now **clamps to the segment**: outside its x-range it compares
+against the nearer endpoint instead of extrapolating. Outside a footprint an
+object has no depth to claim.
+
+#### Measuring occlusion
+Counting "pixels that differ with the walls shown vs hidden" is **not** a
+measure of clipping — the background differs too, which is worth tens of pixels
+and drowns the signal. Render four ways at each spot (walls×character on/off),
+take the pixels that belong to the character, and count how many of those fail
+to show. That is exact: it reported 0 where the pixel-difference method
+reported 30.
+
+Verified after the fix: **0 covered character pixels** at 80 positions hugging
+the walls along both pavements.
+
+> Sweep *standable* positions. An earlier sweep flagged spots inside building
+> footprints where collision means nobody can stand, which is noise.
+
+#### Registering sorters is deferred, or loading is cubic
+`IsoSortingManager.register_sorter()` used to call `_rebuild_static_deps()` for
+**every** static sorter as it arrived. That rebuild is O(n^2), so loading a
+scene with n of them was O(n^3).
+
+It went unnoticed while the street sorted by Y and registered nothing. Switching
+the level to `IsoSorter` and adding the near-side boundary took it to **190
+static sorters**, and `add_child()` on the street scene started taking **1941
+ms** — two seconds of black screen behind the fade, which reads as a slow load
+rather than as a sorting problem.
+
+Registration now just sets a dirty flag and the graph is rebuilt once, in
+`_process`. Measured: enter-tree **1941 ms -> 1 ms**, with a single 59 ms frame
+for the deferred rebuild, then a steady 16.7 ms. Sorting unchanged at 280 of
+280 probes.
+
+> Ablation is the way to find this sort of thing, but only if the ablation
+> really happens: switching the sorters off before `add_child` proves nothing,
+> because `levels/street.gd` switches them straight back on in its `_ready`.
+> The first measurement said sorters were innocent for exactly that reason.
+
+### Sorting: the street uses IsoSorter, not Y-sort
+**Y-sort judges a sprite by a single point, and a wall does not have one** —
+its depth is the *line* of its foot. A character standing near one end of a
+96 px panel sorts wrong against a point taken from the middle, by up to half
+the panel's rise. That is the same failure that put the kerb lip across the
+Doctor's shins, and it is not tunable.
+
+So wall panels carry `IsoSorter` in **LINE** mode with the two ends of their
+base, and props and characters carry it in POINT mode. Every storey of a wall
+shares the **same** base line, so a two-storey wall sorts as one wall.
+
+**The two systems cannot both be active** — `IsoSorter` writes `z_index` every
+frame, which overrides Y-sort entirely. `levels/street.gd` switches the
+characters' sorters *on* in `_ready()`; it has to be done in code because
+`IsoSorter` reads `enabled` in its own `_ready` (which runs first) and a
+property override set while building the scene is not serialised onto a node
+inside an instanced scene.
+
+The floor, decals and kerbs stay out of the sort entirely: they are pinned at
+`z −100/−99/−50`, below the `0`-and-up that `IsoSortingManager` assigns.
+
+Measured over every wall panel — 5 points along each base line, 7 and 16 px
+either side — sorting is correct at **817 of 820** probes. The three misses are
+all on one panel at a run boundary and are worth chasing if they ever show.
+
+### Tile art must not overhang its cell
+**Godot silently drops tile art that overhangs the layer, in a band along the
+top and left of the map as deep as the overhang.** Reproduced in isolation: a
+uniform 6x6 block of one tile loses its first two rows *and* first two columns.
+
+The floor was hit by this. Its art lives in a 96x144 cell with the footprint in
+the bottom 48 px, and the atlas source was pointed at the whole cell with
+`texture_origin` compensating — which does not help, because the art still
+stands 96 px proud of a 48 px tile. Two rows of the map vanished, which reads
+as "the floor stops short of the buildings" rather than as a tiling bug.
+
+The fix is to give the floor a region that is **just the footprint**:
+`texture_region_size = 96x48` pointed at the bottom third of each art cell, and
+no `texture_origin` at all. `FLOOR_COORDS` holds the remapped atlas coordinates.
+
+Where the art genuinely needs the height — a kerb's lip stands 24 px above its
+24x12 cell — pad the layer with fully transparent cells instead, so the band
+that gets dropped is empty. `_pad_for_overhang()`.
+
+So: **a tile whose region is bigger than its tile size is a liability.** Prefer
+resizing the region; pad only when the height is the point.
+
+### One sheet per job
+`sprites/street/ASSETS.md` is the asset spec — cell sizes, anchors and what
+places each sheet. Keep it true; it is what says which files are worth painting.
+
+The build ends by printing **ART ACTUALLY PLACED**, gathered as it places
+things rather than inferred. That is how to tell live art from leftovers: a
+generator will happily keep emitting sheets nothing references.
+
+It caught a lot of that. The floor was sliced into 16 pieces per tile for the
+quarter grid and then went back to whole 96x48 tiles, leaving **256 sliced
+tiles and 8 quarter-native floors** that nothing placed; blocks became wall
+panels and props, leaving **28 block tiles** unreferenced. `decals.png` went
+from 378 tiles to 114.
+
+Block art is kept in `blocks.png` — a solid cube may be wanted somewhere — but
+it is out of the active sheets and labelled so, rather than sitting among the
+art that is live.
+
+### Regenerating the level
+`tools/build_street.gd` builds both the `TileSet` and the scene:
+
+```
+godot --headless --path . --script res://tools/build_street.gd
+```
+
+Editing the generated scene in the editor is fine — just know re-running this
+overwrites it.
+
+**Reload Godot after a rebuild.** The editor caches both the scene and the
+imported textures, so a rebuild made while it is open shows the *old* level —
+including old tile art, which is how a freshly tinted collision layer still
+looks blank. File > Reload Saved Scene, and let it reimport.
+
+**When instancing a character into a built scene, give an owner to the instance
+root only.** Setting owners on its children makes Godot serialise them as brand
+new nodes, so the saved scene gains a second `Sprite`, `AnimationPlayer` and
+`AnimationTree` alongside the real ones. Two animation trees then drive the same
+sprite and the character stops animating — with no error to point at it. Check
+by counting: each character should have exactly one of each.
+
+### Collision and navigation come free
+The `TileSet` carries a physics layer and a navigation layer, and `TileMapLayer`
+bakes both. Painting a floor tile gives pathfinding; painting a block gives
+collision. Verified on the street: 336 of 336 floor cells navigable, a route
+across the whole level, and zero frames spent inside a solid tile when walking
+into a building. No hand-traced outline, no `nav_region.gd`.
+
+**Mark things you step over as walkable, not solid.** The kerbs were solid at
+first, which made an unbroken barrier down both sides of the road and split the
+level into three disconnected navigation strips — the path across it stopped
+122 px short. A 4 px kerb is scenery, not an obstacle.
 
 ---
 
