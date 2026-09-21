@@ -85,18 +85,18 @@ const BLOCKS := [
 ## grid bought has moved to the invisible navigation and collision layers,
 ## where it was the only thing that actually needed it.
 const FLOOR_KEY := {
-	"a": ["cobble_a", "cobble_b", "cobble_c", "cobble_cracked"],
-	"b": ["cobble_b", "cobble_c", "cobble_a", "cobble_puddle"],
-	"p": ["flagstone_a", "flagstone_b", "flagstone_crack"],
-	".": ["road_a", "road_b", "road_patch"],
-	"k": ["flagstone_a", "flagstone_b"],
-	"x": ["flagstone_a", "flagstone_b"],
-	"g": ["flagstone_drain"],
-	"m": ["cobble_manhole"],
-	"u": ["road_puddle"],
-	"t": ["gutter"],
-	"d": ["dirt"],
-	"B": ["flagstone_a", "flagstone_b"],
+	"a": ["road_4", "road_5", "road_3"],
+	"b": ["road_3", "road_4", "road_5"],
+	"p": ["pave_4", "pave_5", "pave_3"],
+	".": ["road_2", "road_3", "road_4"],
+	"k": ["pave_4", "pave_5"],
+	"x": ["pave_3", "pave_4"],
+	"g": ["pave_2"],
+	"m": ["road_2"],
+	"u": ["shade_2"],
+	"t": ["road_1"],
+	"d": ["dirt_1", "dirt_2", "dirt_3"],
+	"B": ["pave_4", "pave_5"],
 }
 # Only things that genuinely fill a tile belong here. Street furniture does
 # not: a block is 96 px wide by definition, so a crate laid this way is the
@@ -115,10 +115,10 @@ const BLOCK_KEY := {
 ## The pavement IS the kerb: each tile hangs its drop below itself, the next
 ## pavement tile covers it, and only the boundary with the road shows a lip.
 const KERB_KEY := {
-	"p": ["flagstone_a_edge", "flagstone_b_edge", "flagstone_crack_edge"],
-	"B": ["flagstone_a_edge", "flagstone_b_edge"],
-	"k": ["flagstone_a_edge", "flagstone_b_edge", "flagstone_drain_edge"],
-	"x": ["flagstone_a_edge"],
+	"p": ["pave_4_edge", "pave_5_edge", "pave_3_edge"],
+	"B": ["pave_4_edge", "pave_5_edge"],
+	"k": ["pave_4_edge", "pave_5_edge"],
+	"x": ["pave_3_edge", "pave_4_edge"],
 }
 
 ## Roughly what percentage of QUARTER floor cells get a decal.

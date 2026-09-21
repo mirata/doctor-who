@@ -1,0 +1,22 @@
+{
+ "sprites/street/decals.png": "0159af0cae650c43e211822f2eec7fcffe16fd25c5fc92f13878861ba13d4025",
+ "sprites/street/floors.png": "962dabc3d5df178113ab5e3e37be54ec33cf9c49f1a9763293f0537a38affc8f",
+ "sprites/street/kerbs.png": "7f99c76e091e0db5010f423832cd4c8ac259334dc0019fa2089dda61ffe857f6",
+ "sprites/street/palette.png": "a3e650546e603a582837953a473d71e0f3bef7af1f6aaee81d3373c206ec0761",
+ "sprites/street/props/barrel_left.png": "91620569557cf1000414c64ed479450eda0a0dc7c90ad9047efa9b2f341b2c0e",
+ "sprites/street/props/barrel_right.png": "70668eace8085edd279dd51761aa74e794a23f5fb8649578c485e8d3e6156082",
+ "sprites/street/props/bike_rack.png": "90d0ff13de3e2e30296b251718ccf75503bfb910d336b88f8310221a643ce58b",
+ "sprites/street/props/bollard.png": "775dad3511eebd784d171cf79c96627f5563ad70a1229925e941fa4342288235",
+ "sprites/street/props/cardboard_box.png": "c1dffbecb3a6681a01c5ac28de398e3fc8d4595cbdfdbbe3c5379d971b579fa6",
+ "sprites/street/props/phone_box.png": "69768d8d489156dcdc32973140c578afde21ac2496e1cd13ee3a1885f4efde5e",
+ "sprites/street/props/postbox.png": "dfd2b4fea24c604d2e3a4e116be9edc99291939c020982f4900a0a21f3eb4058",
+ "sprites/street/props/skip_large.png": "adc21bb301c6fe1bed93e05d01e03af97364074b8f2e6411bb1dd17ccaba6a41",
+ "sprites/street/props/skip_small.png": "330c9f4f8d221920ddf57f4f8e5f6de0aa0e44873e225a667503903b803cab9b",
+ "sprites/street/props/trash_can.png": "3dd8d161eb3961b786b3e75ec741f20ddbf58036d873bdbee83442c762de85b6",
+ "sprites/street/props/trash_can_full.png": "70423956278af1ba85e5b211f9e8f665354b42c114de170a3338cc7dc687c6ab",
+ "sprites/street/props/trash_can_rusty.png": "aa568e6988992d20a3c02374d863b611d8786807b7bbd095e81671615d045020",
+ "sprites/street/props/trash_skip.png": "d3c4214a838363656fa4465259cca5eb74b58c8a0aaeadd391913bfcf63e2217",
+ "sprites/street/props/wall_lamp.png": "95487def40a95e8aa306c1217b95ee36787d156a513c7072468b73ba7c71c07b",
+ "sprites/street/thin_walls.png": "150ebcd997dcbb546522c7a6935bc5904e19ea2f7664298830fd29b39a23eb12",
+ "sprites/street/tile_template.png": "16ba224a98736a2dc006452c88cee14370cc302555bb44f2a0d52debb38ddd7c"
+}

@@ -38,9 +38,9 @@ cancels the current click destination.
 | `scene_door.gd` | `Area2D` that fades to `target_scene` when a body enters |
 | `levels/street_tileset.tres` | The street `TileSet`: collision + navigation per tile |
 | `sprites/street/ASSETS.md` | **What to paint** — every sheet, its cell size and anchor |
-| `sprites/street/floors.png` | 96x48 floor diamonds |
-| `sprites/street/kerbs.png` | 96x64 kerbs (a floor tile plus a lip) |
-| `sprites/street/walls.png` | 96x162 wall panels, one storey of one face |
+| `sprites/street/floors.png` | 64x32 floor diamonds, 17 flat tones |
+| `sprites/street/kerbs.png` | 64x48 kerbs — 11 tones x 3 lip heights |
+| `sprites/street/walls.png` | 64x122 wall panels, one storey of one face. **Hand-painted — not regenerated** |
 | `sprites/street/props/` | free-standing objects, sized by their own artwork |
 | `sprites/street/TILESET.md` | Measurements and the original grid analysis |
 | `nerva.tscn` | Superseded by the street; kept but no longer linked |
@@ -343,38 +343,41 @@ animation_tree.set("parameters/conditions/Run", !is_idle)
 ## Tile levels
 
 `levels/street.tscn` is built from a `TileSet` rather than a painted backdrop.
-The full analysis behind the grid is in `sprites/street/TILESET.md`; the
+**`sprites/street/ASSETS.md` is the source of truth for every sheet** — cell
+sizes, counts, what each one is for, and what happens if you repaint it. The
 practical points:
 
 - **Two grids, split by job.** `tile_size` is a property of the **TileSet**,
   not of the tilemap, so different layers can run at different resolutions.
-  The visible floor is back on **96x48**, which is the size a floor is
-  comfortable to author and to paint in the editor; navigation and collision
-  run on an invisible **24x12** layer underneath.
+  The visible floor is **64x32**, the size a floor is comfortable to author and
+  to paint in the editor; navigation and collision run on an invisible
+  **16x8** layer underneath.
 - That is what reconciles "floors are handy large" with "detail needs to be
   smaller", and it is better than stamping one big tile as 4x4 slices: painting
   a big floor tile no longer forces a big navigation cell, and nobody has to
   place sixteen pieces to lay one paving slab. 336 floor cells, 5376 nav cells.
 - **The two grids do not share an origin.** Godot puts a cell's *corner* on the
   origin, so the centre of big cell (0,0) and the centre of the 4x4 of fine
-  cells it covers differ by `(-36, 0)`. The `Floor` layer's position is
+  cells it covers differ by `(-24, 0)`. The `Floor` layer's position is
   **measured** from the two layers at build time rather than hard-coded — see
   `_fine_centre_of_big()`.
-- `tools/make_tiles.py` slices each drawn floor by deciding every pixel's
-  sub-cell from its position in tile space. Drawing 4x4 overlapping masks
-  instead loses ~5% of pixels along the seams and the joins show; the analytic
-  partition is lossless (measured 0.27 mean colour difference, invisible).
-- **64x32 art tiles, 2:1 isometric** — the same projection the console room art
-  already uses, so tiles and hand-painted rooms mix freely. One tile is a
-  building **bay** — the spacing between window centres in the reference art —
-  rather than a person-sized square.
-- The tilesheet uses **96x144 cells with the footprint diamond in the bottom
-  48 px**, and every tile sets `texture_origin = (0, -48)` to lift the art so
-  that footprint lands on its cell. Blocks are just taller art in the same cell.
-- `tools/make_tiles.py` generates the sheet **and `tiles.json`**, which is the
-  single source of truth for tile names and whether each is walkable or solid.
-  `tools/build_street.gd` reads that file, so the two cannot drift apart — only
-  `TW`/`TH`/`CELL` still need keeping in step by hand.
+- **64x32 is the standard isometric tile, and it is *legal*** — `W = 2H`, both
+  dimensions even, and the fine grid `(W/4, H/4) = 16x8` passes the same two
+  tests. An odd dimension puts a cell centre on half a pixel and smears the
+  whole grid. The full reasoning is in `ASSETS.md`.
+- **A diamond drawn as a polygon does not tile.** Its edges are whatever the
+  rasteriser decides. The shape is fixed by area — one lattice cell is `W·H/2`
+  pixels — so `iso_mask()` builds it explicitly and `close_to_mask()` fills
+  anything a painter left short. Measured after: **0 seam pixels**.
+- **Godot drops tile art that overhangs its cell**, in a band along the top and
+  left of the *whole map*. It reads as "the floor stops short" rather than as a
+  clipping bug, so a sheet whose art exceeds its cell is a trap. Layers whose
+  art legitimately hangs (the kerbs) are padded with a transparent `blank`
+  tile — see `_pad_for_overhang()`.
+- `tools/make_tiles.py` generates every sheet **and `tiles.json`**, which is the
+  single source of truth for tile names, atlas coordinates and whether each is
+  walkable or solid. `tools/build_street.gd` reads that file, so the two cannot
+  drift apart.
 - `TILE_W`/`TILE_H` at the top of the generator drive cell size, block heights
   and every pattern, so the whole set rescales from one value. Keep
   `TILE_W = 2 * TILE_H`.
@@ -384,20 +387,30 @@ practical points:
   came out as blobs filling their cell, and 90 pixels of the floor sheet were
   wrong. Resolve inside the body: `w = TILE_W if w is None else w`.
 
-### Sliced vs quarter-native art
-Both fill the same 4x4 of quarter cells, and which one a floor uses is what
-decides whether it *looks* large-tiled:
+### Hand-painted sheets are never overwritten
+The generator records the sha256 of everything it writes in
+`sprites/street/.generated.json` and compares before writing, so a sheet that
+has been painted over is **kept** and the run says so. Painting over a
+placeholder is all it takes to adopt it. `walls.png` is currently hand-painted
+and deliberately has no entry — do not regenerate it.
 
-| | drawn at | reads as |
-|---|---|---|
-| **Sliced** (`cobble_a`, `flagstone_b`, ...) | 96x48, then cut into 4x4 | big stones — the pattern is just cut up |
-| **Quarter-native** (`q_flag`, `q_cobble`, `q_road`, ...) | 24x12 | small stones, one per fine cell |
+**The manifest is written at the end of a run, not as each sheet goes out.**
+Without that the hash of a sheet the run just changed is never recorded, and
+the next run reads its own output as hand-painting and refuses to touch it —
+the guard latching onto everything it makes. That was a real bug: `kerbs.png`
+regenerated once and then went untouchable.
 
-`_stamp_floor()` picks between them by name: a name the grid catalogue holds on
-its own is quarter-native and gets `SUB x SUB` individually chosen tiles (from
-`QUARTER_FAMILY`, so neighbours vary); anything else is stamped as its slices.
-Changing a floor's look is one entry in `GROUND_KEY`. The street uses fine
-paving and big cobbles on purpose — the road wants large stones.
+### Floors are flat tones, not patterns
+A pattern drawn into a 64x32 tile fights the eye at this size and is awkward to
+repaint. `floors.png` is 17 flat diamonds — six pavement tones, six road, three
+dirt, two shade — plus a transparent `blank`; detail comes from the decals
+layer instead, and recolouring a surface is one pixel. A letter in `GROUND`
+names a **list** of tones and a coordinate hash picks between them, so a
+surface mottles slightly rather than reading as one flat colour.
+
+Kerbs follow the same rule and are generated as a grid rather than a list:
+`<tone>_edge`, `_edge_low` and `_edge_high` for every tone a footway can be
+made of. A new floor tone brings its three kerbs with it for free.
 
 ### Thin walls
 `q_wall_a` / `q_wall_b` (plus `_low`) are quarter-sized brick walls, a quarter
@@ -476,29 +489,15 @@ the right answer. Anything flatter than it is wide belongs on a fixed
 `z_index`, and if it never occludes at all it should be a tile.
 
 #### Tiles taller than a cell need their own atlas source
-`texture_region_size` is per **source**, not per tileset, so a `TileSet` can mix
-cell sizes. Kerb art is 24x36 against a 24x12 grid, so it lives in source 1
-(`tiles_quarter.png`) with `texture_origin = (0, -12)` lifting the art so its
-footprint diamond lands on the cell instead of the middle of the region — the
-same offset the wall sprites use, `-(QUARTER_CELL.y - GRID.y) / 2`.
+`texture_region_size` is per **source**, not per tileset, so one `TileSet` can
+mix cell sizes. Kerb art is 64x48 against a 64x32 grid, so it lives in its own
+source with `texture_origin = (0, -(cell_h - TILE_H) / 2)` — the same offset the
+wall sprites use — which lifts the art so its footprint diamond lands on the
+cell instead of the middle of the region.
 
-This is the general way to make *any* block art into tiles. Only do it for
-things that must not occlude: `tiles.json` carries a `kind` per quarter tile,
-and the builder turns `kerb` into tiles while everything else stays a sprite.
-
-#### Quarter-native art needs its detail thinned out
-Two things that looked fine at 96x48 and were wrong at 24x12, both because
-there are now **16 tiles where there was one**:
-
-- **Roll variants per big cell, not per fine cell.** Rolling per tile scattered
-  weeds and chips sixteen times as thickly and the kerb read as speckled.
-- **Drop per-tile edge highlights.** `block()`'s `cap` lights the top-back
-  edges, which is right on one 96 px kerb and turns a run of quarter kerbs into
-  a lattice of light lines. `t_kerb(cap=False)` for the quarter set.
-
-Laid up in a grid the quarter kerbs are gap-free (measured: 0 transparent
-pixels inside the field) and show faces only at the outer boundary, which is
-what a continuous kerb should do.
+That is the general way to make *any* over-tall art into tiles, and it is why
+the kerb sheet can grow a taller lip without the grid changing. Only do it for
+things that must not occlude a character; everything else stays a sprite.
 
 ### Solid things have to be carved out of the navmesh
 Collision and navigation are independent: the paving stone under a wall is still
@@ -605,18 +604,13 @@ way to stop a tiled floor looking stamped.
 > it, which turns every unpainted pixel opaque black and paints black diamonds
 > across the floor.
 
-Current set: **51 tiles** — 16 floors, 28 blocks, 7 decals.
+Current set: **17 floor tones** (+blank), **33 kerbs**, **38 wall panels**,
+**7 decals** (as 114 slices), 4 thin walls and **14 props**. The authoritative
+list, with what each sheet is for, is `sprites/street/ASSETS.md`.
 
-- floors: cobble x3, cracked, puddle, manhole, flagstone x2, cracked, drain,
-  road x2, patch, puddle, gutter, dirt
-- kerbs and steps: kerb x5 plus corner and dropped, step x2
-- structure: plinth, stone, brick, crate, barrel, iron, brick wall, window,
-  door, poster, pipe, stone wall
-- obstacles: phone box, trash can x3, skip, bollard, postbox
-- decals: paper x2, litter, grime x2, stain, scatter
-
-The kerb lip is **4 px**, measured off the reference — a kerb is a lip you step
-over, not a step you climb, and at 12 px it read as the latter.
+The kerb lip is **6 px**, measured off the reference — a kerb is a lip you step
+over, not a step you climb, and at 12 px it read as the latter. `_low` and
+`_high` variants sit either side at 3 and 10 px.
 
 ### Tiles do not Y-sort against nodes
 **Anything that must occlude a character has to be a `Sprite2D`, not a tile.**
@@ -630,11 +624,11 @@ So the street splits the job like this:
 
 | Node | Visible | Grid | Job |
 |------|---------|------|-----|
-| `Floor` (`TileMapLayer`) | yes, `z −100` | 96x48 | the floor, art only |
-| `Nav` (`TileMapLayer`) | **no** | 24x12 | **navigation** |
-| `Blocks` (`TileMapLayer`) | **no** | 24x12 | **collision** |
-| `Decals` (`TileMapLayer`) | yes, `z −99` | 24x12 | litter and grime |
-| `Kerbs` (`TileMapLayer`) | yes, `z −50` | 24x12 | the kerb lip; never sorts |
+| `Floor` (`TileMapLayer`) | yes, `z −100` | 64x32 | the floor, art only |
+| `Nav` (`TileMapLayer`) | **no** | 16x8 | **navigation** |
+| `Blocks` (`TileMapLayer`) | **no** | 16x8 | **collision** |
+| `Decals` (`TileMapLayer`) | yes, `z −99` | 16x8 | litter and grime |
+| `Kerbs` (`TileMapLayer`) | yes, `z −50` | 64x32 | the kerb lip; never sorts |
 | `Walls` (`Node2D`) | yes | — | facade panels, `IsoSorter` LINE |
 | `Props` (`Node2D`) | yes | — | prop sprites, `IsoSorter` POINT |
 
@@ -655,7 +649,7 @@ rather than blank, so ticking the layer's eye in the editor shows what is
 solid. Nothing is drawn in game because both layers ship hidden.
 
 **The scene is not the source.** `BLOCKS` in `tools/build_street.gd` is — one
-letter per 96x48 cell — and the next build overwrites anything edited by hand
+letter per 64x32 cell — and the next build overwrites anything edited by hand
 in the scene.
 
 The build prints a walkability map every run: one character per big cell,
@@ -952,6 +946,12 @@ Searching that space around a wanted ratio is worth doing rather than guessing:
 72x36 with SUB 3 is exactly 3/4 of 96x48 *and* keeps the old 24x12 fine grid,
 which is not obvious by eye.
 
+**Area matching does not prove a tiling.** A mask can have exactly `W*H/2`
+pixels and no overlaps and still leave gaps — the first attempt did, 3783 of
+them. Test for **uncovered** pixels too, in a box deep inside a large field:
+measure near the edge of a laid patch and the area outside it counts as holes
+and the test lies to you in both directions.
+
 **A diamond drawn as a polygon does not tile.** The shape is fixed by area: one
 lattice cell is `W*H/2` pixels, so the tile must cover exactly that — rows of
 2, 6, 10 ... W-2 and back. Rows of 4, 8, 12 ... look right and are 6% too big,
@@ -1011,11 +1011,11 @@ stands 96 px proud of a 48 px tile. Two rows of the map vanished, which reads
 as "the floor stops short of the buildings" rather than as a tiling bug.
 
 The fix is to give the floor a region that is **just the footprint**:
-`texture_region_size = 96x48` pointed at the bottom third of each art cell, and
+`texture_region_size` equal to the tile, pointed at the footprint of each art cell, and
 no `texture_origin` at all. `FLOOR_COORDS` holds the remapped atlas coordinates.
 
-Where the art genuinely needs the height — a kerb's lip stands 24 px above its
-24x12 cell — pad the layer with fully transparent cells instead, so the band
+Where the art genuinely needs the height — a kerb's lip hangs 16 px below its
+64x32 cell — pad the layer with fully transparent cells instead, so the band
 that gets dropped is empty. `_pad_for_overhang()`.
 
 So: **a tile whose region is bigger than its tile size is a liability.** Prefer
@@ -1030,14 +1030,15 @@ things rather than inferred. That is how to tell live art from leftovers: a
 generator will happily keep emitting sheets nothing references.
 
 It caught a lot of that. The floor was sliced into 16 pieces per tile for the
-quarter grid and then went back to whole 96x48 tiles, leaving **256 sliced
+quarter grid and then went back to whole floor tiles, leaving **256 sliced
 tiles and 8 quarter-native floors** that nothing placed; blocks became wall
 panels and props, leaving **28 block tiles** unreferenced. `decals.png` went
 from 378 tiles to 114.
 
-Block art is kept in `blocks.png` — a solid cube may be wanted somewhere — but
-it is out of the active sheets and labelled so, rather than sitting among the
-art that is live.
+There is no `blocks.png` any more. The **painters** are still in
+`tools/make_tiles.py` (`t_wall`, `t_block`, `t_crate`…), so reviving a solid
+cube means emitting a sheet again — but a sheet that looks current and is never
+drawn is worse than no sheet.
 
 ### Hand edits survive rebuilds
 The scene is regenerated from scratch every build, so anything tweaked in the
@@ -1056,7 +1057,7 @@ the navmesh above it without the overlay having to mention Nav.
 Two things to know:
 
 - **Sub-cell edits cannot go back into `BLOCKS`.** That map is one character
-  per 96x48 cell, and a real edit is usually a few of the sixteen fine cells
+  per 64x32 cell, and a real edit is usually a few of the sixteen fine cells
   inside one — opening a corner, trimming the end of a wall run. The overlay
   exists because the map cannot express them.
 - **`capture` is a diff, so it only sees deliberate changes.** Padding cells

@@ -14,8 +14,8 @@ and the anchor and nothing else has to change.
 
 | Sheet | Cell | Count | What it is |
 |---|---|---|---|
-| `floors.png` | **64×32** | 16 (+1 blank) | the ground: cobbles, paving, road |
-| `kerbs.png` | **64×38** | 4 | a pavement tile whose edge hangs |
+| `floors.png` | **64×32** | 17 tones (+blank) | the ground: flat diamonds, no pattern |
+| `kerbs.png` | **64×48** | 33 (+15 spare) | a pavement tile whose edge hangs |
 | `walls.png` | **64×122** | 38 | one storey of a building face |
 | `props/*.png` | any size | 14 | free-standing objects |
 
@@ -44,26 +44,56 @@ remove. Measured after: **0 seam pixels** anywhere in the floor.
 
 ---
 
-## floors.png — 64×32
+## floors.png — 64×32, laid out 3 x 6 (192x192, square)
 
-One diamond per cell, filling the cell exactly. **The art must not exceed
-64×32**: Godot drops tile art that overhangs its cell, in a band along the top
-and left of the whole map, which reads as "the floor stops short" rather than as
-a tiling bug.
+**Flat diamonds, one tone each, no pattern.** A pattern drawn into a 64x32 tile
+fights the eye at this size and is awkward to repaint; a ramp of tones reads as
+a surface and takes its detail from the decals layer instead. Recolouring a
+surface is then one pixel.
 
-Present: `cobble_a/b/c`, `cobble_cracked`, `cobble_puddle`, `cobble_manhole`,
-`flagstone_a/b`, `flagstone_crack`, `flagstone_drain`, `road_a/b`, `road_patch`,
-`road_puddle`, `gutter`, `dirt`. `blank` is a transparent padding tile — leave it.
+Six pavement tones (`pave_1`..`pave_6`, light to dark), six road
+(`road_1`..`road_6`), three dirt, two shade, plus `blank` — a transparent tile
+used to pad layers whose art overhangs. 18 slots is exactly 3 x 6, which at a
+2:1 tile is a **square sheet**.
 
-A letter in `GROUND` (in `tools/build_street.gd`) names a **list** of these, and
-which one a cell gets is hashed from its coordinates. Adding a variant means
-adding it to a list in `FLOOR_KEY`; no map editing.
+**The art must not exceed 64x32**: Godot drops tile art that overhangs its
+cell, in a band along the top and left of the whole map, which reads as "the
+floor stops short" rather than as a tiling bug.
 
-## kerbs.png — 64×38
+A letter in `GROUND` (in `tools/build_street.gd`) names a **list** of tones and
+which one a cell gets is hashed from its coordinates, so a surface mottles
+slightly instead of being one flat colour.
+
+## kerbs.png — 64×48, laid out 6 x 8 (384x384, square)
 
 A pavement tile with the drop to the road **hanging below** it: the floor
-diamond in the top 32 px, then a 6 px lip. Not a raised block — a raised block
-hides its own faces, because the next tile along the run covers them.
+diamond in the **top 32 px**, then the lip below it.
+
+**A kerb is two choices — which surface, and how far it drops** — so the sheet
+is that grid rather than a hand-picked list: `<tone>_edge`, `<tone>_edge_low`
+and `<tone>_edge_high` for every floor tone a footway can be made of (the six
+pavement tones, three dirt, two shade). 11 x 3 = **33**, and a new floor tone
+brings its three kerbs with it for free. Road tones are excluded — a road has
+no kerb, it is what the kerb drops *to*.
+
+The drops are 3 / 6 / 10 px against the reference's 6 px kerb: `_low` is a
+dropped crossing, `_high` a raised footway. A kerb is a lip you step over, not
+a step you climb — at 12 px it reads as the latter, which is why the tall one
+stops at 10.
+
+The cell allows a lip of up to **16 px**, more than the tallest drawn here, so
+a taller variation can be painted straight into the spare rows and nothing else
+needs changing. 6 x 8 is exactly square at a 64x48 cell, and the 15 unused
+slots are there to paint into without reshuffling the index.
+
+Keep the diamond in the top 32 px wherever the lip ends: the tile is anchored
+on its footprint, not on the art, so a taller lip grows downward over the road
+rather than lifting the pavement. And keep the cell height **even** — the
+anchor is `-(cell_h - 32) / 2`, and an odd cell puts the footprint on half a
+pixel.
+
+Not a raised block — a raised block hides its own faces, because the next tile
+along the run covers them.
 
 One of these goes on **every pavement cell**, not just the row beside the road.
 Where the neighbour is more pavement its top covers the hanging face, so the
@@ -71,8 +101,8 @@ footway reads as continuous; where the neighbour is road, that is a floor tile
 on the layer below and cannot cover anything, so the lip shows. Corners come
 out right without being special-cased.
 
-The surface is the matching floor tile composited on top, so the footway is the
-same flagstone as everywhere else. Keep `TILE_H + lip` **even**.
+The surface is exactly the matching floor tone, so the footway is seamless
+against the plain floor beside it.
 
 ## walls.png — 64×122
 
@@ -139,6 +169,35 @@ not mirrored.
 
 These bound the **near** side of the street. Nothing on the near side may be
 taller than a character, or it hides them.
+
+---
+
+## Hand-painted sheets are never overwritten
+
+`tools/make_tiles.py` records the sha256 of everything it writes in
+`sprites/street/.generated.json`, and on the next run it compares before
+writing. A sheet whose bytes have moved on is **kept**, and the run says so:
+
+```
+  KEPT sprites/street/walls.png - painted over since it was generated, left alone
+```
+
+So painting over a placeholder is all it takes to adopt it — there is no flag
+to set and no risk that a routine regeneration eats a day's work. A file with
+no record at all is also kept, on the same reasoning: better to skip and say so
+than to overwrite something whose origin is unknown.
+
+Two things to know:
+
+- **To go back to the placeholder**, delete the file (or its manifest entry)
+  and re-run. There is no force switch, deliberately.
+- **The manifest is written at the END of a run**, once every sheet is out.
+  Without that the hash of a sheet the run just changed is never recorded, and
+  the *next* run reads its own output as hand-painting and refuses to touch it
+  — the guard latching onto everything it makes. Writing it last also means a
+  crash mid-run leaves the old record standing rather than a half-updated one.
+
+`walls.png` is currently hand-painted and has no entry. Keep it that way.
 
 ---
 

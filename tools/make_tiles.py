@@ -9,7 +9,10 @@ TILE_W = 2 * TILE_H: the game is 2:1 isometric throughout.
 tiles.json is the single source of truth for what each tile is called and
 whether it is walkable or solid; tools/build_street.gd reads it.
 """
+import hashlib
+import io as _io
 import json
+import os
 import random
 
 import numpy as np
@@ -712,12 +715,115 @@ def write_props():
         box = cell.getbbox()
         if box is None:
             continue
-        cell.crop(box).save("sprites/street/props/%s.png" % name)
+        save_sheet(cell.crop(box), "sprites/street/props/%s.png" % name, _MANIFEST)
         made.append("%s %dx%d" % (name, box[2] - box[0], box[3] - box[1]))
     return made
 
 
+
+# ---------------------------------------------------------- floor tones ----
+# The floor is FLAT DIAMONDS, one tone each, no pattern.
+#
+# Patterns drawn into a 64x32 tile fight the eye at this size and are hard to
+# repaint by hand; a ramp of tones reads as a surface, takes detail from the
+# decals layer, and can be recoloured by editing one pixel. The tones are
+# interpolated within each family from the palette's own low/mid/high, so they
+# sit in the same range as everything else.
+#
+# 17 tones plus the transparent padding tile is 18, which lays out as 3 x 6 -
+# exactly square at a 2:1 tile.
+
+def _ramp(lo, hi, n):
+    """n colours from lo to hi inclusive."""
+    out = []
+    for i in range(n):
+        t = 0.0 if n == 1 else i / float(n - 1)
+        out.append(tuple(int(round(lo[k] + (hi[k] - lo[k]) * t)) for k in range(3)))
+    return out
+
+
+def floor_tones():
+    """name -> rgb, in the order they go on the sheet."""
+    tones = {}
+    for i, c in enumerate(_ramp(C["flag_lo"], C["flag_hi"], 6)):
+        tones["pave_%d" % (i + 1)] = c
+    for i, c in enumerate(_ramp(C["road_lo"], C["cobble_hi"], 6)):
+        tones["road_%d" % (i + 1)] = c
+    for i, c in enumerate(_ramp(C["dirt_lo"], C["dirt"], 3)):
+        tones["dirt_%d" % (i + 1)] = c
+    for i, c in enumerate(_ramp(C["grime"], C["road_lo"], 2)):
+        tones["shade_%d" % (i + 1)] = c
+    return tones
+
+
+def write_floors():
+    """One flat diamond per tone, on a square sheet.
+
+    `blank` is a fully transparent tile, used to pad layers whose art overhangs
+    their cell. It counts toward the grid, which is why there are 18 slots.
+    """
+    tones = floor_tones()
+    names = list(tones) + ["blank"]
+    cols = 3
+    rows = (len(names) + cols - 1) // cols
+    sheet = Image.new("RGBA", (cols * TILE_W, rows * TILE_H), (0, 0, 0, 0))
+    mask = iso_mask(TILE_W, TILE_H)
+    index = {}
+    for n, name in enumerate(names):
+        cell = Image.new("RGBA", (TILE_W, TILE_H), (0, 0, 0, 0))
+        if name != "blank":
+            flat = Image.new("RGBA", (TILE_W, TILE_H), tones[name] + (255,))
+            cell.paste(flat, (0, 0), mask)
+        c, r = n % cols, n // cols
+        sheet.alpha_composite(cell, (c * TILE_W, r * TILE_H))
+        index[name] = [c, r]
+    save_sheet(sheet, "sprites/street/floors.png", _MANIFEST)
+    return index, tones, sheet.size
+
+
+# --------------------------------------------------- not clobbering art ----
+# Every sheet here is generated, so a hand-painted replacement would be
+# destroyed by the next run. The manifest records the hash of what this script
+# last wrote; if the file on disk no longer matches, somebody has painted over
+# it and it is left alone.
+#
+# A sheet with no record at all is also left alone: better to skip and say so
+# than to overwrite something whose origin is unknown.
+MANIFEST = "sprites/street/.generated.json"
+_MANIFEST = {}
+
+
+def load_manifest():
+    try:
+        with open(MANIFEST) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_sheet(img, path, manifest):
+    buf = _io.BytesIO()
+    img.save(buf, "PNG")
+    data = buf.getvalue()
+    if os.path.exists(path):
+        on_disk = hashlib.sha256(open(path, "rb").read()).hexdigest()
+        recorded = manifest.get(path)
+        if recorded is None:
+            print("  KEPT %s - no record of generating it, left alone" % path)
+            return False
+        if on_disk != recorded:
+            print("  KEPT %s - painted over since it was generated, left alone" % path)
+            return False
+    with open(path, "wb") as f:
+        f.write(data)
+    manifest[path] = hashlib.sha256(data).hexdigest()
+    return True
+
+
 def main():
+    global _MANIFEST
+    manifest = load_manifest()
+    _MANIFEST = manifest
     rows = (len(TILES) + COLS - 1) // COLS
     sheet = Image.new("RGBA", (COLS * CELL_W, rows * CELL_H), (0, 0, 0, 0))
     art = {}                       # name -> [col, row] in the big art sheet
@@ -752,22 +858,8 @@ def main():
     # t_wall...), so reviving a solid cube is a matter of emitting a sheet
     # again; the stale image is not worth keeping around to confuse things.
 
-    # ---- floors on their own sheet, at the size of the diamond ------------
-    # The floor layer draws a 96x48 region, so that is what the sheet holds.
-    # A cell bigger than the tile overhangs, and Godot drops overhanging art in
-    # a band along the top and left of the map - see CLAUDE.md.
-    # a fully transparent tile, for padding layers whose art overhangs
-    floors = floors + [("blank", Image.new("RGBA", (CELL_W, CELL_H), (0, 0, 0, 0)))]
-    fcols = 8
-    frows = (len(floors) + fcols - 1) // fcols
-    fsheet = Image.new("RGBA", (fcols * TILE_W, frows * TILE_H), (0, 0, 0, 0))
-    floor_index = {}
-    for n, (name, cell) in enumerate(floors):
-        c, r = n % fcols, n // fcols
-        fsheet.alpha_composite(cell.crop((0, CELL_H - TILE_H, TILE_W, CELL_H)),
-                               (c * TILE_W, r * TILE_H))
-        floor_index[name] = [c, r]
-    fsheet.save("sprites/street/floors.png")
+    # ---- floors: flat tones, no pattern ----------------------------------
+    floor_index, tones, floor_size = write_floors()
 
     # ---- kerbs: a pavement tile whose edge HANGS over the road ------------
     #
@@ -782,33 +874,61 @@ def main():
     #     hanging face and hides it, which is what a continuous footway wants;
     #   - against the road, the neighbour is a FLOOR tile on the layer below,
     #     so it cannot cover anything and the drop shows.
-    LIP = REF["kerb"]
-    kerb_h = TILE_H + LIP
-    kerb_src = [(n, c) for n, c in floors if n.startswith("flagstone")]
+    # A kerb is TWO choices - which surface, and how far it drops - so the set
+    # is that grid rather than a hand-picked list. Naming it `<tone>_edge<lip>`
+    # means the builder can ask for any combination without the sheet having to
+    # anticipate it, and a new tone brings its kerbs with it for free.
+    #
+    # The drops are measured against the reference's 6 px kerb: `_low` is a
+    # dropped crossing, `_high` a raised footway. A kerb is a lip you step
+    # over, not a step you climb - at 12 px it reads as the latter, so the tall
+    # one stops at 10.
+    LIPS = [("_low", 3), ("", REF["kerb"]), ("_high", 10)]
+    # Every surface a footway can be made of. Road tones are excluded: a road
+    # has no kerb, it is what the kerb drops TO.
+    KERB_TONES = [n for n in tones
+                  if n.split("_")[0] in ("pave", "dirt", "shade")]
+    # The cell leaves room for a lip of up to KERB_HEADROOM, more than the
+    # tallest drawn here, so a taller variation can be painted by hand without
+    # the sheet being resized and everything re-indexed. The spare rows are
+    # transparent and cost nothing.
+    #
+    # Keep it EVEN: the footprint has to land on a whole pixel, and the tile's
+    # texture_origin is -(cell_h - TILE_H) / 2.
+    kerb_h = TILE_H + KERB_HEADROOM
+    kerb_mask = iso_mask(TILE_W, TILE_H)
     kerbs = []
-    for name, flat in kerb_src:
-        img = Image.new("RGBA", (TILE_W, kerb_h), (0, 0, 0, 0))
-        d = ImageDraw.Draw(img)
-        west = (0, TILE_H // 2)
-        south = (TILE_W // 2, TILE_H - 1)
-        east = (TILE_W - 1, TILE_H // 2)
-        d.polygon([west, south, (south[0], south[1] + LIP), (west[0], west[1] + LIP)],
-                  fill=C["flag_lo"])
-        d.polygon([south, east, (east[0], east[1] + LIP), (south[0], south[1] + LIP)],
-                  fill=C["stone_r"])
-        # the surface itself, exactly the floor tile so the footway is seamless
-        img.alpha_composite(flat.crop((0, CELL_H - TILE_H, TILE_W, CELL_H)), (0, 0))
-        kerbs.append((name + "_edge", img))
+    for name in KERB_TONES:
+        for suffix, lip in LIPS:
+            img = Image.new("RGBA", (TILE_W, kerb_h), (0, 0, 0, 0))
+            d = ImageDraw.Draw(img)
+            west = (0, TILE_H // 2)
+            south = (TILE_W // 2, TILE_H - 1)
+            east = (TILE_W - 1, TILE_H // 2)
+            d.polygon([west, south, (south[0], south[1] + lip),
+                       (west[0], west[1] + lip)],
+                      fill=tuple(max(0, v - 18) for v in tones[name]))
+            d.polygon([south, east, (east[0], east[1] + lip),
+                       (south[0], south[1] + lip)],
+                      fill=tuple(max(0, v - 30) for v in tones[name]))
+            # the surface itself, exactly the floor tone, so the footway is
+            # seamless against the plain floor tiles beside it
+            surface = Image.new("RGBA", (TILE_W, TILE_H), tones[name] + (255,))
+            img.paste(surface, (0, 0), kerb_mask)
+            kerbs.append((name + "_edge" + suffix, img))
 
-    kcols = 8
-    krows = (len(kerbs) + kcols - 1) // kcols
+    # 6 x 8 is exactly square at a 64x48 cell (4 cols = 3 rows), which is the
+    # shape an image model handles best - and it leaves spare slots to paint
+    # into without reshuffling the index.
+    kcols, krows = 6, 8
+    assert len(kerbs) <= kcols * krows, "%d kerbs will not fit" % len(kerbs)
     ksheet = Image.new("RGBA", (kcols * TILE_W, krows * kerb_h), (0, 0, 0, 0))
     kerb_index = {}
     for n, (name, cell) in enumerate(kerbs):
         c, r = n % kcols, n // kcols
         ksheet.alpha_composite(cell, (c * TILE_W, r * kerb_h))
         kerb_index[name] = [c, r]
-    ksheet.save("sprites/street/kerbs.png")
+    save_sheet(ksheet, "sprites/street/kerbs.png", manifest)
 
     # ---- the quarter-grid sheet Godot actually lays down -------------------
     sw, sh = TILE_W // SUB, TILE_H // SUB
@@ -863,7 +983,7 @@ def main():
                       {"collision": "collision", "walkable": "walkable"}.get(
                           tile_name, "ground")),
         }
-    gsheet.save("sprites/street/decals.png")
+    save_sheet(gsheet, "sprites/street/decals.png", manifest)
 
     # quarter-native blocks are taller than a cell, so they live on their own
     # small art sheet and get drawn as sprites like the big blocks do
@@ -873,7 +993,7 @@ def main():
     for n, (name, (cell, kind)) in enumerate(sorted(qart.items())):
         qsheet.alpha_composite(cell, (n * qcell_w, 0))
         qart_index[name] = {"atlas": [n, 0], "kind": kind}
-    qsheet.save("sprites/street/thin_walls.png")
+    save_sheet(qsheet, "sprites/street/thin_walls.png", manifest)
 
     prop_sizes = write_props()
     panels, pw, ph = write_panels()
@@ -886,9 +1006,9 @@ def main():
             "grid_tile_size": [sw, sh],
             # kind "kerb" -> placed as tiles; anything else -> drawn as a sprite
             "quarter_art_cell": [qcell_w, qcell_h],
-            "floor_names": [n for n, _ in floors if n != "blank"],
+            "floor_names": [n for n in tones],
             "floor_cell": [TILE_W, TILE_H],
-            "kerb_cell": [TILE_W, TILE_H + REF["kerb"]],
+            "kerb_cell": [TILE_W, TILE_H + KERB_HEADROOM],
             "kerbs": kerb_index,        # kerbs.png, a floor diamond plus a lip
             "floors": floor_index,      # floors.png, one 96x48 diamond per cell
             "panel_cell": [PANEL_W, panel_size()[1]],
@@ -900,16 +1020,28 @@ def main():
         }, f, indent=2)
 
     print("props/         %s" % ", ".join(prop_sizes))
-    print("walls.png      %dx%d  |  %d segments at %dx%d (%d layouts x 2 facings, %d bays each)"
-          % (pw * 2, ph * (len(PANEL_LAYOUTS) + 1), len(panels), pw, ph,
-             len(PANEL_LAYOUTS) + 1, PANEL_BAYS))
-    print("floors.png     %s  |  %d floor tiles at %dx%d (%d edge pixels closed)"
-          % (fsheet.size, len(floors), TILE_W, TILE_H, gaps))
-    print("kerbs.png      %s  |  %d pavement-edge tiles at %dx%d (%d px lip)"
-          % (ksheet.size, len(kerbs), TILE_W, kerb_h, LIP))
+    _wr = (len(PANEL_LAYOUTS) + 1 + PAIRS_PER_ROW - 1) // PAIRS_PER_ROW
+    print("walls.png      %dx%d  |  %d segments at %dx%d, %d pairs x %d rows (aspect %.2f)"
+          % (pw * 2 * PAIRS_PER_ROW, ph * _wr, len(panels), pw, ph,
+             PAIRS_PER_ROW, _wr, (pw * 2.0 * PAIRS_PER_ROW) / (ph * _wr)))
+    print("floors.png     %s  |  %d flat tones + blank at %dx%d (aspect %.2f)"
+          % (floor_size, len(tones), TILE_W, TILE_H, floor_size[0] / float(floor_size[1])))
+    print("kerbs.png      %s  |  %d = %d tones x %d lips at %dx%d (%d spare, room for %d px, aspect %.2f)"
+          % (ksheet.size, len(kerbs), len(KERB_TONES), len(LIPS), TILE_W, kerb_h,
+             kcols * krows - len(kerbs), KERB_HEADROOM,
+             ksheet.size[0] / float(ksheet.size[1])))
     print("thin_walls.png %s  |  %d at %dx%d" % (qsheet.size, len(qart_index), qcell_w, qcell_h))
     print("decals.png     %s  |  %d tiles at %dx%d (%d decals x %d slices + 2 markers)"
           % (gsheet.size, len(grid_tiles), sw, sh, len(decals), SUB * SUB))
+
+    # Last, and only here: the record of what this run produced. Without it a
+    # sheet regenerates, its hash moves on, and the NEXT run reads the change
+    # as hand-painting and refuses to touch it - the guard turning on its own
+    # output. Written after everything so a crash mid-run leaves the old
+    # record standing rather than a half-updated one.
+    with open(MANIFEST, "w", newline="\n") as f:
+        json.dump(manifest, f, indent=1, sort_keys=True)
+        f.write("\n")
 
 
 
@@ -943,8 +1075,9 @@ PANEL_H = 88                     # one storey, deliberately squat
 # reads as a street you look over rather than up at. Stylised on purpose - the
 # numbers below are what it costs.
 PANEL_PAD = 1
+PAIRS_PER_ROW = 4                # layout pairs across the sheet
 
-KERB_CELL_H = TILE_H + 20        # the diamond, plus headroom for the lip
+KERB_HEADROOM = 16               # room below the diamond for the lip, max lip height
 PANEL_W = BAY_W * PANEL_BAYS
 PANEL_RISE = BAY_RISE * PANEL_BAYS
 
@@ -1160,24 +1293,38 @@ def paint_quoin(d, side, h=PANEL_H):
 
 
 def write_panels():
-    """One sheet of wall segments, both facings, indexed by name."""
+    """One sheet of wall segments, both facings, indexed by name.
+
+    Laid out as a GRID rather than a two-column ribbon. At one pair per row the
+    sheet came out 128x2318 - a 1:18 strip, which is awkward to look at and
+    worse to hand to an image model. Four pairs across gives 512x610, near
+    enough square, and each layout's _l and _r stay side by side so a facing
+    pair can be repainted together and stay consistent.
+
+    The builder reads `panels[name] = [col, row]` and works the region out from
+    the cell size, so the arrangement can change freely - nothing else cares.
+    """
     pw, ph = panel_size()
-    rows = len(PANEL_LAYOUTS) + 1                 # +1 for the quoin
-    sheet = Image.new("RGBA", (pw * 2, ph * rows), (0, 0, 0, 0))
+    entries = [(name, stone, kinds) for name, stone, kinds in PANEL_LAYOUTS]
+    entries.append(("quoin", None, None))          # painted specially
+    rows = (len(entries) + PAIRS_PER_ROW - 1) // PAIRS_PER_ROW
+    sheet = Image.new("RGBA", (pw * 2 * PAIRS_PER_ROW, ph * rows), (0, 0, 0, 0))
     index = {}
-    for row, (name, stone, kinds) in enumerate(PANEL_LAYOUTS):
-        for col, side in enumerate(("l", "r")):
+    for i, (name, stone, kinds) in enumerate(entries):
+        gx, gy = i % PAIRS_PER_ROW, i // PAIRS_PER_ROW
+        for k, side in enumerate(("l", "r")):
             cell = Image.new("RGBA", (pw, ph), (0, 0, 0, 0))
-            paint_panel(ImageDraw.Draw(cell), side, stone, kinds, PANEL_H, row)
-            sheet.alpha_composite(cell, (col * pw, row * ph))
-            index["%s_%s" % (name, side)] = [col, row]
-    for col, side in enumerate(("l", "r")):
-        cell = Image.new("RGBA", (pw, ph), (0, 0, 0, 0))
-        paint_quoin(ImageDraw.Draw(cell), side, PANEL_H)
-        sheet.alpha_composite(cell, (col * pw, (rows - 1) * ph))
-        index["quoin_%s" % side] = [col, rows - 1]
-    sheet.save("sprites/street/walls.png")
+            d = ImageDraw.Draw(cell)
+            if name == "quoin":
+                paint_quoin(d, side, PANEL_H)
+            else:
+                paint_panel(d, side, stone, kinds, PANEL_H, i)
+            col = gx * 2 + k
+            sheet.alpha_composite(cell, (col * pw, gy * ph))
+            index["%s_%s" % (name, side)] = [col, gy]
+    save_sheet(sheet, "sprites/street/walls.png", _MANIFEST)
     return index, pw, ph
+
 
 if __name__ == "__main__":
     main()
