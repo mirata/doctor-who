@@ -828,6 +828,65 @@ for the deferred rebuild, then a steady 16.7 ms. Sorting unchanged at 280 of
 > because `levels/street.gd` switches them straight back on in its `_ready`.
 > The first measurement said sorters were innocent for exactly that reason.
 
+#### Characters sort independently
+Each character has its own `IsoSorter`, sits in the manager's `_movable` list,
+is compared against everything else every frame and gets its own `z_index`
+(measured: Player 222, Sarah 220). Nothing groups them.
+
+The only grouping is deliberate: a wall's upper storeys are children of its
+ground panel and share its z, so a stacked wall sorts as one object.
+
+#### The sorting trace
+`levels/street.gd` keeps the last `trace_frames` (600, ten seconds) of sorting
+state in **`user://sort_trace.txt`**, rewritten as it goes. On Windows that is
+`%APPDATA%\Godotpp_userdata\Demo\sort_trace.txt`.
+
+Per frame, for each character, it records every occluder overlapping them and
+two numbers that should never disagree:
+
+| | |
+|---|---|
+| `cmp` | what `IsoSortingManager._compare()` itself says: `+1` the character is in front, `-1` behind |
+| `z` | the `z_index` each actually got |
+
+`cmp=+1` with the occluder on a **higher** z is a real fault, tagged `WRONG`,
+and the frame header gets `<<< FAULT`. The comparison comes from the manager
+rather than a hand-rolled predicate, so the trace cannot disagree with it for
+the reason a guess at the geometry would.
+
+**It latches.** Thirty frames after the first fault it stops recording and
+prints where the file is, so the moment is not rolled over by whatever happens
+next. Without that you have to notice and quit within ten seconds.
+
+If something looks wrong but is *not* tagged, the sorter and the trace agree
+with each other and the fault is in the rule, not the ordering — the rolling
+buffer is then what to read, so stop within ten seconds.
+
+Turn it off with `trace_sorting` when not hunting something.
+
+> `cycles_broken` is in every line. On the street it is **0 on every frame** —
+> there are no dependency cycles here at all, which rules out a whole family of
+> explanations before any of them are chased.
+
+#### Catching an occlusion sighting
+`levels/street.gd` has `log_occlusion` (on by default). It prints a line
+whenever a character is more than `log_occlusion_fraction` covered by something
+drawn in front of them, naming the occluder and the big cell:
+
+    [occlusion] Player is 100% covered by panel_l_4_1_0 at big(4.00, 1.00)
+
+It does **not** judge — being hidden behind a wall is often correct. It exists
+so a sighting can be matched to a cause rather than hunted from scratch. One
+line per pairing per cell, so walking a facade does not spam.
+
+> Three attempts to reproduce a reported vanishing all failed: a walked route
+> checked against geometry, a pixel sweep of standable positions, and a test
+> for the order flipping while standing still. The first of those was itself
+> wrong - its "ground truth" extrapolated a wall's line past its end, which is
+> the very thing the clamped comparison exists to stop, so it reported correct
+> occlusion as failures. Measure what is on screen, not what the geometry
+> ought to imply.
+
 ### Sorting: the street uses IsoSorter, not Y-sort
 **Y-sort judges a sprite by a single point, and a wall does not have one** —
 its depth is the *line* of its foot. A character standing near one end of a

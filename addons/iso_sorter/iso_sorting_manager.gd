@@ -6,6 +6,10 @@ var _movable: Array = []
 
 var _static_deps: Dictionary = {}
 var _static_dirty: bool = false
+## How many constraints the last sort had to throw away to break cycles. A
+## dropped constraint is a pair whose order is then arbitrary, so this is the
+## first thing to look at when something sorts wrongly.
+var debug_cycles_broken: int = 0
 
 var _dfs_color: Dictionary = {}
 var _dfs_parent: Dictionary = {}
@@ -16,6 +20,9 @@ var _dfs_cycle_end = null
 const Z_FLOOR_BASE := -1000
 const Z_BASE := 0
 const Z_STEP := 2
+## Enough passes to actually finish. Each one removes an edge, so this only
+## bounds pathological graphs rather than being a budget.
+const MAX_CYCLE_PASSES := 64
 
 
 func register_sorter(sorter: IsoSorter) -> void:
@@ -252,24 +259,46 @@ func _topo_visit(node: Object, deps: Dictionary, visited: Dictionary, result: Ar
 	result.append(node)
 
 
+## Breaks dependency cycles, which an isometric scene produces routinely: A in
+## front of B, B in front of C, C in front of A is perfectly possible with real
+## geometry. Something has to give, and the choice of what decides which object
+## visibly pops.
+##
+## Two rules:
+##  - Never sacrifice a MOVABLE's constraint if a static one will do. Two walls
+##    in the wrong order is almost always invisible - they barely overlap and
+##    neither moves. A character in the wrong order is a character vanishing
+##    behind a wall they are standing in front of, which is what this used to
+##    do while walking past a facade.
+##  - Keep going until the graph is acyclic. Stopping after a fixed few passes
+##    leaves cycles in, and `_topo_visit` then drops those constraints silently
+##    and arbitrarily.
 func _break_cycles(nodes: Array, deps: Dictionary) -> void:
-	for _pass in range(5):
+	debug_cycles_broken = 0
+	for _pass in range(MAX_CYCLE_PASSES):
 		var cycle := _find_cycle(nodes, deps)
 		if cycle.is_empty():
 			return
 		var best_from = null
 		var best_to = null
-		var best_dx := -1.0
+		var best_score := -1.0
 		for i in cycle.size():
 			var from_node: IsoSorter = cycle[i]
 			var to_node: IsoSorter = cycle[(i + 1) % cycle.size()]
 			var dx := abs(_avg_sort_x(from_node) - _avg_sort_x(to_node))
-			if dx > best_dx:
-				best_dx = dx
+			# a whole grid's worth of bias, so any static-static edge beats
+			# every edge that involves something that moves
+			if not from_node.is_movable and not to_node.is_movable:
+				dx += 100000.0
+			if dx > best_score:
+				best_score = dx
 				best_from = from_node
 				best_to = to_node
 		if best_to != null and deps.has(best_to):
 			(deps[best_to] as Array).erase(best_from)
+			debug_cycles_broken += 1
+		else:
+			return
 
 
 func _find_cycle(nodes: Array, deps: Dictionary) -> Array:
