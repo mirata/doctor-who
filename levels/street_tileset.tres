@@ -3,12 +3,12 @@
 [ext_resource type="Texture2D" path="res://sprites/street/decals.png" id="1_spga8"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_3i7xf"]
-vertices = PackedVector2Array(0, -6, 12, 0, 0, 6, -12, 0)
+vertices = PackedVector2Array(0, -4, 8, 0, 0, 4, -8, 0)
 polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0510s"]
 texture = ExtResource("1_spga8")
-texture_region_size = Vector2i(24, 12)
+texture_region_size = Vector2i(16, 8)
 0:0/0 = 0
 1:0/0 = 0
 2:0/0 = 0
@@ -122,14 +122,14 @@ texture_region_size = Vector2i(24, 12)
 14:6/0 = 0
 15:6/0 = 0
 0:7/0 = 0
-0:7/0/physics_layer_0/polygon_0/points = PackedVector2Array(0, -6, 12, 0, 0, 6, -12, 0)
+0:7/0/physics_layer_0/polygon_0/points = PackedVector2Array(0, -4, 8, 0, 0, 4, -8, 0)
 1:7/0 = 0
 1:7/0/navigation_layer_0/polygon = SubResource("NavigationPolygon_3i7xf")
 
 [resource]
 tile_shape = 1
 tile_layout = 5
-tile_size = Vector2i(24, 12)
+tile_size = Vector2i(16, 8)
 physics_layer_0/collision_layer = 1
 navigation_layer_0/layers = 1
 sources/0 = SubResource("TileSetAtlasSource_0510s")

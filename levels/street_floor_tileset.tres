@@ -5,7 +5,7 @@
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_llbvk"]
 texture = ExtResource("1_y3sev")
-texture_region_size = Vector2i(96, 48)
+texture_region_size = Vector2i(64, 32)
 0:0/0 = 0
 1:0/0 = 0
 2:0/0 = 0
@@ -26,29 +26,19 @@ texture_region_size = Vector2i(96, 48)
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_jb3jc"]
 texture = ExtResource("2_a6hav")
-texture_region_size = Vector2i(96, 64)
+texture_region_size = Vector2i(64, 38)
 0:0/0 = 0
-0:0/0/texture_origin = Vector2i(0, -8)
+0:0/0/texture_origin = Vector2i(0, -3)
 1:0/0 = 0
-1:0/0/texture_origin = Vector2i(0, -8)
+1:0/0/texture_origin = Vector2i(0, -3)
 2:0/0 = 0
-2:0/0/texture_origin = Vector2i(0, -8)
+2:0/0/texture_origin = Vector2i(0, -3)
 3:0/0 = 0
-3:0/0/texture_origin = Vector2i(0, -8)
-4:0/0 = 0
-4:0/0/texture_origin = Vector2i(0, -8)
-5:0/0 = 0
-5:0/0/texture_origin = Vector2i(0, -8)
-6:0/0 = 0
-6:0/0/texture_origin = Vector2i(0, -8)
-7:0/0 = 0
-7:0/0/texture_origin = Vector2i(0, -8)
-0:1/0 = 0
-0:1/0/texture_origin = Vector2i(0, -8)
+3:0/0/texture_origin = Vector2i(0, -3)
 
 [resource]
 tile_shape = 1
 tile_layout = 5
-tile_size = Vector2i(96, 48)
+tile_size = Vector2i(64, 32)
 sources/0 = SubResource("TileSetAtlasSource_llbvk")
 sources/1 = SubResource("TileSetAtlasSource_jb3jc")

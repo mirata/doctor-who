@@ -1,20 +1,20 @@
 {
   "art_tile_size": [
-    96,
-    48
+    64,
+    32
   ],
   "art_cell_size": [
-    96,
-    144
+    64,
+    96
   ],
   "sub": 4,
   "grid_tile_size": [
-    24,
-    12
+    16,
+    8
   ],
   "quarter_art_cell": [
-    24,
-    36
+    16,
+    24
   ],
   "floor_names": [
     "cobble_a",
@@ -35,49 +35,29 @@
     "dirt"
   ],
   "floor_cell": [
-    96,
-    48
+    64,
+    32
   ],
   "kerb_cell": [
-    96,
-    64
+    64,
+    38
   ],
   "kerbs": {
-    "kerb": [
+    "flagstone_a_edge": [
       0,
       0
     ],
-    "kerb_worn": [
+    "flagstone_b_edge": [
       1,
       0
     ],
-    "kerb_gutter": [
+    "flagstone_crack_edge": [
       2,
       0
     ],
-    "kerb_weeds": [
+    "flagstone_drain_edge": [
       3,
       0
-    ],
-    "kerb_dropped": [
-      4,
-      0
-    ],
-    "kerb_corner": [
-      5,
-      0
-    ],
-    "kerb_tall": [
-      6,
-      0
-    ],
-    "step": [
-      7,
-      0
-    ],
-    "step_worn": [
-      0,
-      1
     ]
   },
   "floors": {
@@ -151,11 +131,11 @@
     ]
   },
   "panel_cell": [
-    96,
-    162
+    64,
+    122
   ],
-  "panel_height": 112,
-  "panel_rise": 48,
+  "panel_height": 88,
+  "panel_rise": 32,
   "panels": {
     "plain_l": [
       0,
@@ -173,157 +153,141 @@
       1,
       1
     ],
-    "windows_l": [
+    "window_l": [
       0,
       2
     ],
-    "windows_r": [
+    "window_r": [
       1,
       2
     ],
-    "window_plain_l": [
+    "window_b_l": [
       0,
       3
     ],
-    "window_plain_r": [
+    "window_b_r": [
       1,
       3
-    ],
-    "plain_window_l": [
-      0,
-      4
-    ],
-    "plain_window_r": [
-      1,
-      4
     ],
     "window_lit_l": [
       0,
-      5
+      4
     ],
     "window_lit_r": [
       1,
-      5
+      4
     ],
     "window_out_l": [
       0,
-      6
+      5
     ],
     "window_out_r": [
       1,
-      6
-    ],
-    "window_pipe_l": [
-      0,
-      7
-    ],
-    "window_pipe_r": [
-      1,
-      7
-    ],
-    "poster_l": [
-      0,
-      8
-    ],
-    "poster_r": [
-      1,
-      8
-    ],
-    "sign_l": [
-      0,
-      9
-    ],
-    "sign_r": [
-      1,
-      9
-    ],
-    "vent_l": [
-      0,
-      10
-    ],
-    "vent_r": [
-      1,
-      10
+      5
     ],
     "pipe_l": [
       0,
-      11
+      6
     ],
     "pipe_r": [
       1,
-      11
+      6
+    ],
+    "poster_l": [
+      0,
+      7
+    ],
+    "poster_r": [
+      1,
+      7
+    ],
+    "sign_l": [
+      0,
+      8
+    ],
+    "sign_r": [
+      1,
+      8
+    ],
+    "vent_l": [
+      0,
+      9
+    ],
+    "vent_r": [
+      1,
+      9
     ],
     "g_plain_l": [
       0,
-      12
+      10
     ],
     "g_plain_r": [
       1,
-      12
+      10
     ],
     "g_door_l": [
       0,
-      13
+      11
     ],
     "g_door_r": [
       1,
-      13
+      11
     ],
-    "g_door_win_l": [
+    "g_window_l": [
       0,
-      14
+      12
     ],
-    "g_door_win_r": [
+    "g_window_r": [
       1,
-      14
-    ],
-    "g_windows_l": [
-      0,
-      15
-    ],
-    "g_windows_r": [
-      1,
-      15
+      12
     ],
     "g_shop_l": [
       0,
-      16
+      13
     ],
     "g_shop_r": [
       1,
-      16
+      13
     ],
     "g_shopdoor_l": [
       0,
-      17
+      14
     ],
     "g_shopdoor_r": [
       1,
-      17
+      14
     ],
-    "g_door_pipe_l": [
+    "g_pipe_l": [
       0,
-      18
+      15
     ],
-    "g_door_pipe_r": [
+    "g_pipe_r": [
       1,
-      18
+      15
     ],
     "g_stone_l": [
       0,
-      19
+      16
     ],
     "g_stone_r": [
       1,
-      19
+      16
+    ],
+    "g_stone_door_l": [
+      0,
+      17
+    ],
+    "g_stone_door_r": [
+      1,
+      17
     ],
     "quoin_l": [
       0,
-      20
+      18
     ],
     "quoin_r": [
       1,
-      20
+      18
     ]
   },
   "quarter_art": {

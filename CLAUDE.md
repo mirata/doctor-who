@@ -364,7 +364,7 @@ practical points:
   sub-cell from its position in tile space. Drawing 4x4 overlapping masks
   instead loses ~5% of pixels along the seams and the joins show; the analytic
   partition is lossless (measured 0.27 mean colour difference, invisible).
-- **96x48 art tiles, 2:1 isometric** — the same projection the console room art
+- **64x32 art tiles, 2:1 isometric** — the same projection the console room art
   already uses, so tiles and hand-painted rooms mix freely. One tile is a
   building **bay** — the spacing between window centres in the reference art —
   rather than a person-sized square.
@@ -729,6 +729,33 @@ off without swallowing anyone. Its collision still comes from `BLOCKS`.
 **Rule of thumb: nothing on the near side of a walkable area may be taller than
 a character.** The far side can be as tall as you like.
 
+#### One figure, computed once
+How many cell faces a panel spans was worked out in **two** places: once in
+`_panel_bays()` from the sheet, and once as a hard-coded `PANEL_CELL.x / 48`
+in the run loop. They agreed until the panel width changed, and then said 2
+and 1 — so every panel was treated as a one-cell remainder and **cropped to
+half its width**, which cut every door and window down the middle.
+
+A run that is not a whole number of panels long genuinely does have to crop its
+last panel, so cropping is right; cropping *everything* was the bug. The
+remainder now also gets a **plain** layout, because half a brick wall is fine
+and half a door is not. The build says how many were cropped.
+
+#### Nothing lists the layouts twice
+`GROUND_PANELS` / `UPPER_PANELS` are **derived from the sheet at load**, by
+prefix: `g_*` is a ground floor, anything else an upper storey, `quoin` is
+placed deliberately rather than at random.
+
+They used to be hand-written lists in the builder, and renaming the layouts
+rotted them instantly: `_spawn_wall` could not find `g_door_win` or
+`window_plain` any more, skipped those panels, and left **holes in the
+facades** — visible as black gaps in the buildings. The only complaint was a
+`push_warning`, which nobody reads.
+
+So: a missing panel now **prints loudly** and is counted in the build summary
+as `<-- n MISSING ART`, and the lists cannot drift because there is only one
+of them.
+
 #### Panel variations are composed, not drawn
 A panel is a list of **bay** kinds, so "window + door" is a line in
 `PANEL_LAYOUTS` rather than a new painter. Bays live in `BAYS` and each one
@@ -912,6 +939,66 @@ Measured over every wall panel — 5 points along each base line, 7 and 16 px
 either side — sorting is correct at **817 of 820** probes. The three misses are
 all on one panel at a run boundary and are worth chasing if they ever show.
 
+### A legal tile size, and a diamond that actually tiles
+The tile is **64x32**, `SUB = 4`, fine grid **16x8**. Three rules decide what
+is legal, and the fine grid has to pass them too:
+
+1. `W = 2H`, or the edge is not a clean two-across-one-down staircase.
+2. Both dimensions **even** — a cell sits at `((x-y)*W/2, (x+y)*H/2)`, and an
+   odd dimension lands on half a pixel.
+3. `(W/SUB, H/SUB)` must satisfy 1 and 2 as well.
+
+Searching that space around a wanted ratio is worth doing rather than guessing:
+72x36 with SUB 3 is exactly 3/4 of 96x48 *and* keeps the old 24x12 fine grid,
+which is not obvious by eye.
+
+**A diamond drawn as a polygon does not tile.** The shape is fixed by area: one
+lattice cell is `W*H/2` pixels, so the tile must cover exactly that — rows of
+2, 6, 10 ... W-2 and back. Rows of 4, 8, 12 ... look right and are 6% too big,
+which overlaps rather than gapping and is harder to spot.
+
+`close_to_mask()` then fills anything the painter left short, because masking
+multiplies alpha and can only ever **remove**: a pixel the polygon missed at
+the two-pixel tip stays transparent however good the mask is. Floors only —
+a decal is meant to be holes. Measured: **0 seam pixels** in the floor.
+
+### A kerb is an edge, not an object
+A kerb is **not a thing standing on the pavement** — it is where the pavement
+stops. Modelled as a raised block it fails twice over:
+
+- **A run of raised tiles hides its own faces.** The face is drawn above the
+  footprint edge, so the next tile along covers it with its raised top. Only
+  the last tile in a run keeps a lip, which is why ours read as a flat band
+  with a shadow at one end.
+- Raising only the kerb row puts a step **up** from the pavement onto it and
+  another down to the road, when the pavement surface should simply *be* the
+  kerb top.
+
+So every pavement cell is an edge tile, and the drop **hangs below** the
+footprint rather than standing above it. The draw order then does the work:
+
+| the neighbour is | what happens |
+|---|---|
+| more pavement | its top sits exactly over the hanging face and hides it — a continuous footway |
+| the road | it is a FLOOR tile on the layer below, so it cannot cover anything and the drop shows |
+
+Nothing has to know which cells are "the kerb row". The lip appears wherever
+the pavement meets something lower, including at corners, for free.
+
+The tile is the floor art with the faces composited under it, so the footway
+is the same flagstone as the rest and there is no seam where the edge tiles
+start. Keep `TILE_H + kerb` **even**, or the footprint lands on half a pixel.
+
+### Architecture is measured in metres, not tiles
+`REF` is sized against the **character**: 71 px of Doctor is 1.8 m, so ~39 px
+to the metre. A door is 0.9 x 2.0 m = 36 x 79 px, and therefore taller than he
+is. While those sizes were fractions of a tile, every change of tile size
+rescaled the architecture with it and doors kept ending up shorter than the
+people walking through them.
+
+A **bay is two cells**. A cell's wall face is `TILE_W/2` = 32 px, too narrow
+for a 36 px door, so a panel is 128 px = four cell faces = two 64 px bays.
+
 ### Tile art must not overhang its cell
 **Godot silently drops tile art that overhangs the layer, in a band along the
 top and left of the map as deep as the overhang.** Reproduced in isolation: a
@@ -951,6 +1038,33 @@ from 378 tiles to 114.
 Block art is kept in `blocks.png` — a solid cube may be wanted somewhere — but
 it is out of the active sheets and labelled so, rather than sitting among the
 art that is live.
+
+### Hand edits survive rebuilds
+The scene is regenerated from scratch every build, so anything tweaked in the
+editor would be lost. `levels/street_edits.json` is the exception: a list of
+fine-grid cells to clear or place, re-applied after generating.
+
+    godot --headless --path . --script res://tools/build_street.gd -- capture
+
+`capture` generates the level, compares it with the scene **on disk**, and
+writes the difference. Do that after editing in the editor and the change
+becomes permanent; build normally and it is re-applied.
+
+It runs **before** navigation is carved, so clearing a collision cell frees
+the navmesh above it without the overlay having to mention Nav.
+
+Two things to know:
+
+- **Sub-cell edits cannot go back into `BLOCKS`.** That map is one character
+  per 96x48 cell, and a real edit is usually a few of the sixteen fine cells
+  inside one — opening a corner, trimming the end of a wall run. The overlay
+  exists because the map cannot express them.
+- **`capture` is a diff, so it only sees deliberate changes.** Padding cells
+  outside the map drift between builds and correctly do not survive the round
+  trip; do not read their disappearance as lost work.
+
+Hand-edited scenes are also copied to `levels/_handedits/` before any risky
+step, because a diff-based mechanism is only as good as the thing it diffs.
 
 ### Regenerating the level
 `tools/build_street.gd` builds both the `TileSet` and the scene:

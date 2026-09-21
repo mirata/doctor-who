@@ -28,6 +28,11 @@ const WALL_SHEET := "res://sprites/street/walls.png"
 const FLOOR_TILESET_OUT := "res://levels/street_floor_tileset.tres"
 const TILESET_OUT := "res://levels/street_tileset.tres"
 const SCENE_OUT := "res://levels/street.tscn"
+## Hand edits, re-applied after generating. The scene is regenerated from
+## scratch every build, so anything tweaked in the editor would otherwise be
+## lost; this is how a change survives. Capture new ones with
+## tools/capture_edits.py, which diffs the scene against a pristine build.
+const EDITS := "res://levels/street_edits.json"
 
 var SUB := 4
 var GRID := Vector2i(24, 12)        # the cell Godot lays down
@@ -106,9 +111,14 @@ const BLOCK_KEY := {
 ## Kerb variants, chosen per BIG cell rather than per fine cell: at quarter
 ## resolution there are 16 tiles to a big one, so rolling per tile scatters
 ## weeds and chips sixteen times as thickly and the kerb reads as speckled.
+## Every pavement cell gets an edge tile, not just the row beside the road.
+## The pavement IS the kerb: each tile hangs its drop below itself, the next
+## pavement tile covers it, and only the boundary with the road shows a lip.
 const KERB_KEY := {
-	"k": ["kerb", "kerb", "kerb", "kerb", "kerb_worn", "kerb_gutter"],
-	"x": ["kerb_dropped"],
+	"p": ["flagstone_a_edge", "flagstone_b_edge", "flagstone_crack_edge"],
+	"B": ["flagstone_a_edge", "flagstone_b_edge"],
+	"k": ["flagstone_a_edge", "flagstone_b_edge", "flagstone_drain_edge"],
+	"x": ["flagstone_a_edge"],
 }
 
 ## Roughly what percentage of QUARTER floor cells get a decal.
@@ -162,7 +172,14 @@ const PROPS := [
 ]
 
 
+## `-- capture` diffs the scene on disk against a freshly generated one and
+## writes the difference to street_edits.json, instead of saving. That is how
+## an edit made in the editor becomes permanent: generate, compare, record.
+var _capturing := false
+
+
 func _initialize() -> void:
+	_capturing = OS.get_cmdline_user_args().has("capture")
 	_load_catalogue()
 	var tileset := _build_tileset()
 	var floor_tileset := _build_floor_tileset()
@@ -184,6 +201,7 @@ func _load_catalogue() -> void:
 		FLOOR_COORDS[name] = Vector2i(int(raw["floors"][name][0]), int(raw["floors"][name][1]))
 	for name in raw["grid"]:
 		GRID_TILES[name] = raw["grid"][name]
+	BAY_W = int(ART.x / 2)
 	PANEL_CELL = Vector2i(int(raw["panel_cell"][0]), int(raw["panel_cell"][1]))
 	PANEL_H = int(raw["panel_height"])
 	PANEL_RISE = int(raw["panel_rise"])
@@ -193,6 +211,7 @@ func _load_catalogue() -> void:
 	for name in raw["quarter_art"]:
 		var q: Dictionary = raw["quarter_art"][name]
 		QUARTER_ART[name] = Vector2i(int(q["atlas"][0]), int(q["atlas"][1]))
+	_sort_panel_families()
 	print("catalogue: %d decal tiles at %s, %d floors at %s, %d wall panels at %s, sub=%d"
 		% [GRID_TILES.size(), str(GRID), FLOOR_COORDS.size(), str(ART),
 		PANELS.size(), str(PANEL_CELL), SUB])
@@ -512,20 +531,61 @@ const STOREYS := 2
 ## The near side gets a low wall laid as WALL_RUNS instead, which bounds the
 ## street without swallowing anyone.
 const STOREYS_BY_BLOCK := {"S": 0}
-const GROUND_PANELS := ["g_plain", "g_plain", "g_door", "g_door_win",
-	"g_windows", "g_shop", "g_shopdoor", "g_door_pipe"]
-const BOUNDARY_PANELS := ["g_plain", "g_plain", "g_windows", "g_door"]
-const UPPER_PANELS := ["plain", "plain_b", "windows", "window_plain",
-	"plain_window", "window_lit", "window_out", "window_pipe", "poster",
-	"sign", "vent", "pipe"]
+## Which layouts may be picked for which storey. Derived from the sheet at
+## load, NOT listed here: a hand-kept list silently rots the moment a layout is
+## renamed, and the only symptom is a hole in a wall where `_spawn_wall` could
+## not find the art. That is exactly what happened when the panels went from
+## two bays to one.
+##
+##   g_*    ground floor        everything else   upper storeys
+##   quoin  a corner column, placed deliberately rather than at random
+var GROUND_PANELS: Array = []
+var UPPER_PANELS: Array = []
+var BOUNDARY_PANELS: Array = []
+## Layouts with nothing in them, for the cropped end of a short run.
+var PLAIN_GROUND: Array = []
+var PLAIN_UPPER: Array = []
+
+
+func _sort_panel_families() -> void:
+	var seen := {}
+	for full in PANELS:
+		var base: String = full.substr(0, full.length() - 2)   # drop _l / _r
+		if base == "quoin" or seen.has(base):
+			continue
+		seen[base] = true
+		if base.begins_with("g_"):
+			GROUND_PANELS.append(base)
+		else:
+			UPPER_PANELS.append(base)
+	GROUND_PANELS.sort()
+	UPPER_PANELS.sort()
+	BOUNDARY_PANELS = GROUND_PANELS.duplicate()
+	for n in GROUND_PANELS:
+		if String(n).contains("plain"):
+			PLAIN_GROUND.append(n)
+	for n in UPPER_PANELS:
+		if String(n).contains("plain"):
+			PLAIN_UPPER.append(n)
+	if PLAIN_GROUND.is_empty():
+		PLAIN_GROUND = GROUND_PANELS.duplicate()
+	if PLAIN_UPPER.is_empty():
+		PLAIN_UPPER = UPPER_PANELS.duplicate()
+	if GROUND_PANELS.is_empty() or UPPER_PANELS.is_empty():
+		push_error("no wall layouts found in the sheet")
+	print("panel layouts: %d ground, %d upper" % [GROUND_PANELS.size(), UPPER_PANELS.size()])
 
 var PANELS := {}                    # name -> Vector2i in walls.png
 var PANEL_CELL := Vector2i(96, 162)
 var PANEL_H := 112
 var PANEL_RISE := 48
 var PANEL_PAD := 1
-var BAY_W := 48                     # one bay: the reference's window spacing
+## The width of ONE CELL's wall face, which is what a panel is measured in.
+## Derived from the tile so it cannot drift when the tile size changes.
+var BAY_W := 32
 var _bays_covered := 0              # faces the spawned panels actually span
+var _missing_panels := 0            # panels skipped for want of art
+var _partial_panels := 0            # panels cropped to fit a short run
 var _solid_why := {}                # fine cell -> what made it solid
 var _prop_blocks := []              # prop circles, which are bodies not tiles
 var _used := {}                     # every art name the build actually places
@@ -612,9 +672,17 @@ func _spawn_wall(parent: Node2D, owner_node: Node, side: String,
 	for storey in storeys:
 		var family: Array = (BOUNDARY_PANELS if single
 			else (GROUND_PANELS if storey == 0 else UPPER_PANELS))
+		# A run that is not a whole number of panels long has its last panel
+		# CROPPED, and cropping a door leaves half a door. Give the remainder
+		# plain brick, which survives being cut.
+		if bays < _panel_bays():
+			_partial_panels += 1
+			family = PLAIN_GROUND if storey == 0 else PLAIN_UPPER
 		var name: String = "%s_%s" % [_pick(family, start.x * 31 + storey, start.y), side]
 		if not PANELS.has(name):
-			push_warning("panel art missing: %s" % name)
+			# a hole in a wall, not a warning to scroll past
+			print("MISSING PANEL ART: %s - facade will have a gap here" % name)
+			_missing_panels += 1
 			continue
 		var spr := Sprite2D.new()
 		spr.name = "panel_%s_%d_%d_%d" % [side, start.x, start.y, storey]
@@ -665,7 +733,9 @@ func _count_exposed() -> int:
 
 ## Groups exposed faces into runs, chops each into panels and spawns them.
 func _spawn_facades(parent: Node2D, owner_node: Node) -> int:
-	var bays: int = int(PANEL_CELL.x / 48)
+	# how many cell faces one panel spans - the same figure _panel_bays() uses,
+	# because a mismatch here crops every panel and slices its door in half
+	var bays: int = _panel_bays()
 	var made := 0
 	var height := BLOCKS.size()
 	var width := 0
@@ -918,15 +988,25 @@ func _build_scene(tileset: TileSet, floor_tileset: TileSet) -> void:
 	walls.owner = root
 	var panels_made: int = _spawn_facades(walls, root)
 	var exposed: int = _count_exposed()
-	print("wall panels: %d covering %d of %d exposed faces%s"
+	print("wall panels: %d covering %d of %d exposed faces%s%s"
 		% [panels_made, _bays_covered, exposed,
-		"" if _bays_covered == exposed else "   <-- MISMATCH"])
+		"" if _bays_covered == exposed else "   <-- MISMATCH",
+		"" if _missing_panels == 0 else "   <-- %d MISSING ART" % _missing_panels])
+	if _partial_panels > 0:
+		print("  %d panel(s) cropped to a short run - given plain brick so the"
+			% _partial_panels + " crop does not cut a door in half")
 
 	var props := Node2D.new()
 	props.name = "Props"
 	root.add_child(props)
 	props.owner = root
 	print("thin walls: ", _spawn_wall_runs(props, nav, blocks, root))
+	var editable := {"Blocks": blocks, "Kerbs": kerbs, "Floor": floors, "Decals": decals}
+	if _capturing:
+		_capture_hand_edits(editable)
+		quit()
+		return
+	_apply_hand_edits(editable)
 	print("nav cut by walls and buildings: ", _carve_nav_cells(nav, blocks))
 	print("props: %d (nav cut under them: %d)"
 		% [_place_props(props, nav, root), _carved])
@@ -984,7 +1064,7 @@ func _print_walk_map(nav: TileMapLayer) -> void:
 	for row in GROUND:
 		width = maxi(width, row.length())
 	print("")
-	print("=== WHERE YOU CAN WALK (one character per 96x48 cell) ===")
+	print("=== WHERE YOU CAN WALK (one character per %dx%d cell) ===" % [ART.x, ART.y])
 	print("    . open   B building   n corner nook   w thin wall   p prop   - no navmesh")
 	var header := "     "
 	for x in width:
@@ -1030,6 +1110,84 @@ func _print_walk_map(nav: TileMapLayer) -> void:
 				line += "."
 		print("%3d  %s" % [y, line])
 	print("")
+
+
+## Records how the scene on disk differs from what this build just generated,
+## so edits made in the editor survive the next build.
+func _capture_hand_edits(by_name: Dictionary) -> void:
+	if not ResourceLoader.exists(SCENE_OUT):
+		print("nothing to capture: no scene on disk yet")
+		return
+	var existing := (load(SCENE_OUT) as PackedScene).instantiate()
+	var layers := {}
+	var total_erase := 0
+	var total_set := 0
+	for layer_name in by_name:
+		var made: TileMapLayer = by_name[layer_name]
+		var theirs := existing.get_node_or_null(layer_name) as TileMapLayer
+		if theirs == null:
+			continue
+		var have := {}
+		for c in theirs.get_used_cells():
+			have[c] = true
+		var erase := []
+		for c in made.get_used_cells():
+			if not have.has(c):
+				erase.append([c.x, c.y])
+		var add := []
+		for c in theirs.get_used_cells():
+			if made.get_cell_source_id(c) == -1:
+				add.append([c.x, c.y, theirs.get_cell_source_id(c),
+					theirs.get_cell_atlas_coords(c).x, theirs.get_cell_atlas_coords(c).y,
+					theirs.get_cell_alternative_tile(c)])
+		if erase.is_empty() and add.is_empty():
+			continue
+		layers[layer_name] = {"erase": erase, "set": add}
+		total_erase += erase.size()
+		total_set += add.size()
+		print("  %-8s you cleared %d, you added %d" % [layer_name, erase.size(), add.size()])
+	existing.free()
+	var out := {
+		"_comment": "Hand edits to the generated street, re-applied after every build. "
+			+ "Fine-grid cell coordinates. Nav is not listed: it is derived from Blocks, "
+			+ "so clearing collision here frees the navmesh automatically. "
+			+ "Regenerate with: godot --headless --path . "
+			+ "--script res://tools/build_street.gd -- capture",
+		"layers": layers,
+	}
+	var f := FileAccess.open(EDITS, FileAccess.WRITE)
+	f.store_string(JSON.stringify(out, " "))
+	f.close()
+	print("captured %d cleared and %d added cells to %s" % [total_erase, total_set, EDITS])
+
+
+## Re-applies the hand edits from street_edits.json.
+##
+## Runs BEFORE navigation is carved, so clearing a collision cell frees the
+## navmesh over it without the overlay having to say so.
+func _apply_hand_edits(by_name: Dictionary) -> void:
+	if not FileAccess.file_exists(EDITS):
+		return
+	var raw = JSON.parse_string(FileAccess.get_file_as_string(EDITS))
+	if raw == null or not (raw as Dictionary).has("layers"):
+		return
+	var erased := 0
+	var placed := 0
+	for layer_name in (raw["layers"] as Dictionary):
+		if not by_name.has(layer_name):
+			push_warning("hand edits name a layer that does not exist: %s" % layer_name)
+			continue
+		var layer: TileMapLayer = by_name[layer_name]
+		var entry: Dictionary = raw["layers"][layer_name]
+		for cell in entry.get("erase", []):
+			layer.erase_cell(Vector2i(int(cell[0]), int(cell[1])))
+			erased += 1
+		for cell in entry.get("set", []):
+			layer.set_cell(Vector2i(int(cell[0]), int(cell[1])), int(cell[2]),
+				Vector2i(int(cell[3]), int(cell[4])), int(cell[5]))
+			placed += 1
+	print("hand edits: %d cells cleared, %d placed (levels/street_edits.json)"
+		% [erased, placed])
 
 
 ## Where the SUB x SUB fine cells of a big cell actually sit, averaged - the

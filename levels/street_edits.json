@@ -1,0 +1,78 @@
+{
+ "_comment": "Hand edits to the generated street, re-applied after every build. Fine-grid cell coordinates. Nav is not listed: it is derived from Blocks, so clearing collision here frees the navmesh automatically. Regenerate with: godot --headless --path . --script res://tools/build_street.gd -- capture",
+ "layers": {
+  "Blocks": {
+   "erase": [
+    [
+     44,
+     4
+    ],
+    [
+     44,
+     5
+    ],
+    [
+     44,
+     6
+    ],
+    [
+     44,
+     7
+    ],
+    [
+     45,
+     4
+    ],
+    [
+     45,
+     5
+    ],
+    [
+     45,
+     6
+    ],
+    [
+     45,
+     7
+    ],
+    [
+     46,
+     4
+    ],
+    [
+     46,
+     6
+    ],
+    [
+     46,
+     7
+    ],
+    [
+     47,
+     4
+    ],
+    [
+     47,
+     5
+    ],
+    [
+     47,
+     6
+    ],
+    [
+     47,
+     7
+    ],
+    [
+     24,
+     12
+    ],
+    [
+     25,
+     12
+    ]
+   ],
+   "set": []
+  }
+ }
+}

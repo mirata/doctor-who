@@ -14,20 +14,40 @@ and the anchor and nothing else has to change.
 
 | Sheet | Cell | Count | What it is |
 |---|---|---|---|
-| `floors.png` | **96×48** | 16 (+1 blank) | the ground: cobbles, paving, road |
-| `kerbs.png` | **96×64** | 9 | a floor tile with a lip |
-| `walls.png` | **96×162** | 42 | one storey of a building face |
+| `floors.png` | **64×32** | 16 (+1 blank) | the ground: cobbles, paving, road |
+| `kerbs.png` | **64×38** | 4 | a pavement tile whose edge hangs |
+| `walls.png` | **64×122** | 38 | one storey of a building face |
 | `props/*.png` | any size | 14 | free-standing objects |
 
-Plus two supporting sheets: `decals.png` (24×12 litter overlays) and
-`thin_walls.png` (24×36 knee-high walls).
+Plus two supporting sheets: `decals.png` (16×8 litter overlays) and
+`thin_walls.png` (16×24 knee-high walls).
+
+## The tile size, and why it is 64×32
+
+64×32 is the standard isometric tile and it is **legal**, which not every size
+is. Three rules, and the fine grid has to pass them too:
+
+1. **W = 2H**, or the diamond edge is not a clean two-across-one-down staircase
+   and neighbours sawtooth against each other.
+2. **Both dimensions even.** A cell sits at `((x−y)·W/2, (x+y)·H/2)`; an odd
+   dimension puts that on half a pixel and smears the whole grid.
+3. The **fine grid** `(W/SUB, H/SUB)` must satisfy 1 and 2 as well, since
+   collision, navigation and decals are laid on it. 64×32 with SUB 4 gives
+   16×8 — even, and finer than what came before.
+
+**A diamond drawn as a polygon does not tile.** Its edges are whatever the
+rasteriser decides. The exact shape is fixed by area: one lattice cell is
+`W·H/2` pixels, so a tile must cover precisely that — rows of 2, 6, 10 … W−2
+and back down. `iso_mask()` builds it; `close_to_mask()` then fills anything
+the painter left short, because masking multiplies alpha and can only ever
+remove. Measured after: **0 seam pixels** anywhere in the floor.
 
 ---
 
-## floors.png — 96×48
+## floors.png — 64×32
 
 One diamond per cell, filling the cell exactly. **The art must not exceed
-96×48**: Godot drops tile art that overhangs its cell, in a band along the top
+64×32**: Godot drops tile art that overhangs its cell, in a band along the top
 and left of the whole map, which reads as "the floor stops short" rather than as
 a tiling bug.
 
@@ -39,25 +59,40 @@ A letter in `GROUND` (in `tools/build_street.gd`) names a **list** of these, and
 which one a cell gets is hashed from its coordinates. Adding a variant means
 adding it to a list in `FLOOR_KEY`; no map editing.
 
-## kerbs.png — 96×64
+## kerbs.png — 64×38
 
-The same 96×48 footprint as a floor tile, sitting in the **bottom 48 px**, with
-16 px of headroom above it for the lip. The lip is **4 px** — measured off the
-reference; a kerb is something you step over, not a step you climb.
+A pavement tile with the drop to the road **hanging below** it: the floor
+diamond in the top 32 px, then a 6 px lip. Not a raised block — a raised block
+hides its own faces, because the next tile along the run covers them.
 
-Present: `kerb`, `kerb_worn`, `kerb_gutter`, `kerb_weeds`, `kerb_dropped`,
-`kerb_corner`, `kerb_tall`, `step`, `step_worn`.
+One of these goes on **every pavement cell**, not just the row beside the road.
+Where the neighbour is more pavement its top covers the hanging face, so the
+footway reads as continuous; where the neighbour is road, that is a floor tile
+on the layer below and cannot cover anything, so the lip shows. Corners come
+out right without being special-cased.
 
-Kerbs never sort against anything — they are pinned below everything that walks,
-because 96 px of art judged from one point puts its lip across the shins of
-anyone standing just north of it.
+The surface is the matching floor tile composited on top, so the footway is the
+same flagstone as everywhere else. Keep `TILE_H + lip` **even**.
 
-## walls.png — 96×162
+## walls.png — 64×122
 
-One **storey** of one **face**, two bays wide. The footprint is the bottom of the
-cell: the base line runs corner to corner across the 96 px width, rising 48 px
-for the `_r` facing and falling 48 px for the `_l` facing. Above that is 112 px
-of storey, plus 1 px of margin.
+One **storey** of one **face**, one bay wide. The base line runs corner to
+corner across the 64 px width, rising 32 px for the `_r` facing and falling
+32 px for the `_l` facing. Above that is 88 px of storey, plus margin.
+
+**A bay is two cells, not one.** A cell's wall face is only `TILE_W/2` = 32 px
+across — too narrow to hold a 36 px door, which is why doors kept coming out
+shorter than the Doctor while they were pegged to the tile. A panel is one
+64 px bay = two cell faces, and it is placed two cells at a time.
+
+The naming is the contract: **`g_*` is a ground floor, anything else an upper
+storey**. The builder sorts them by that prefix, so adding a layout needs no
+change anywhere else — and cannot leave a hole by being forgotten.
+
+Architecture is sized against the **character**: the Doctor is 76 px for
+1.8 m, so ~42 px to the metre. Life size would be an 84 px door and a 127 px
+storey; these are drawn at about 3/4 of that on purpose, so the street reads as
+something you look over rather than up at. A door is 36 x 66 px.
 
 **The two facings are separate artwork.** They are mirror images geometrically,
 but the two faces catch different light, so a flipped `_r` does not read as an

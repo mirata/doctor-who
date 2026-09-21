@@ -17,7 +17,14 @@ from PIL import Image, ImageChops, ImageDraw
 
 # A wall face spans TILE_W/2 across. The reference's window bays are ~45 px
 # apart, so TILE_W = 96 puts one window per tile with brick either side.
-TILE_W, TILE_H = 96, 48
+# 64x32, the standard isometric tile. Legal on every count: W = 2H keeps the
+# 2:1 staircase, both dimensions are even so a cell centre lands on a whole
+# pixel, and SUB = 4 gives a 16x8 fine grid - also even, and finer than the
+# 24x12 we had.
+#
+# One tile is roughly a metre square at this scale: a character is 71 px for
+# 1.8 m, so about 39 px to the metre, and 64 / sqrt(2) = 45 px = 1.15 m.
+TILE_W, TILE_H = 64, 32
 COLS = 8
 
 # The grid Godot works on is a QUARTER of the art tile. Floors are drawn big and
@@ -32,14 +39,20 @@ U = TILE_H                                     # one tile-height
 # Feature sizes measured off the reference art, in pixels. Keeping them in
 # pixels rather than as fractions of the face means they stay the right size if
 # the tile size changes again.
+# Sized in METRES against the character rather than as fractions of a tile.
+# The character is 71 px tall for 1.8 m, so ~39 px to the metre. Architecture
+# has to answer to the person walking through it, not to the floor grid - that
+# is why doors kept coming out shorter than the Doctor while they were pegged
+# to the tile.
+PX_PER_M = 39.0
 REF = {
-    "course": 8,        # brick course height
-    "win_w": 32, "win_h": 52, "win_sill": 14,
-    "door_w": 32, "door_h": 64,
-    "cobble": 16,       # one cobble stone across
-    "flag": 30,         # one paving slab across
-    "kerb": 4,          # the kerb lip is a thin band, not a step
-    "phone_h": 86, "can_h": 40, "skip_h": 52, "bollard_h": 30, "post_h": 62,
+    "course": 4,        # brick course, ~0.1 m with its joint
+    "win_w": 40, "win_h": 35, "win_sill": 27,     # heights at 3/4
+    "door_w": 36, "door_h": 66,                   # 0.9 m wide, a touch taller
+    "cobble": 7,        # one cobble stone across, ~0.18 m
+    "flag": 24,         # one paving slab across, ~0.6 m
+    "kerb": 6,           # also keeps TILE_H + kerb even          # the kerb lip is a thin band, not a step
+    "phone_h": 95, "can_h": 36, "skip_h": 47, "bollard_h": 36, "post_h": 63,
 }
 
 C = {
@@ -79,6 +92,49 @@ def ground(a, b):
     return (CX + (a - b) * TILE_W / 2.0, CY - TILE_H / 2.0 + (a + b) * TILE_H / 2.0)
 
 
+def iso_mask(w, h):
+    """The exact interlocking isometric diamond, built row by row.
+
+    A polygon fill does NOT tile. Its edges are whatever the rasteriser decides,
+    and two neighbours end up sharing no pixels along the seam - which shows as
+    a one-pixel gap down every tile edge, all over the floor. The 2:1 staircase
+    is defined per row, and the widths are fixed by area: the lattice places
+    tiles at ((x-y)*w/2, (x+y)*h/2), so one lattice cell is w*h/2 pixels and a
+    tile must cover exactly that or it gaps (too few) or overlaps (too many).
+    Rows of 2, 6, 10 ... w-2 and back down sum to precisely w*h/2."""
+    m = Image.new("L", (w, h), 0)
+    px = m.load()
+    half = w // 2
+    for j in range(h):
+        run = 2 * j + 1 if j < h // 2 else 2 * (h - 1 - j) + 1
+        for x in range(max(0, half - run), min(w, half + run)):
+            px[x, j] = 255
+    return m
+
+
+def close_to_mask(cell, mask):
+    """Fills any pixel the mask claims but the painter left empty.
+
+    Masking multiplies alpha, so it can only ever REMOVE. If a painter's
+    polygon stops a pixel short of the exact diamond - and a rasteriser will,
+    on the two-pixel rows at the very tip - that pixel stays transparent and
+    shows as a gap once the tiles are laid. Only for floors: a decal is
+    supposed to be mostly holes."""
+    px = cell.load()
+    mp = mask.load()
+    w, h = cell.size
+    missing = [(x, y) for y in range(h) for x in range(w)
+               if mp[x, y] and px[x, y][3] == 0]
+    for (x, y) in missing:
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1),
+                       (-1, -1), (1, 1), (-1, 1), (1, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < w and 0 <= ny < h and px[nx, ny][3] > 0:
+                px[x, y] = px[nx, ny]
+                break
+    return len(missing)
+
+
 def diamond(cx, cy, w=None, h=None):
     """The footprint diamond.
 
@@ -87,7 +143,9 @@ def diamond(cx, cy, w=None, h=None):
     ignore at_size() and draw every quarter-native tile at the big size."""
     w = TILE_W if w is None else w
     h = TILE_H if h is None else h
-    return [(cx, cy - h / 2), (cx + w / 2 - 1, cy), (cx, cy + h / 2 - 1), (cx - w / 2, cy)]
+    # deliberately NOT inset: the exact extent is decided by iso_mask(), and a
+    # fill that stops short cannot be masked back out to the right shape
+    return [(cx, cy - h / 2), (cx + w / 2, cy), (cx, cy + h / 2), (cx - w / 2, cy)]
 
 
 def face_pt(side, u, v, h):
@@ -633,12 +691,12 @@ QUARTER_BLOCKS = [
 # heights from REF in pixels, so only the footprint needs saying. The width is
 # the diamond across its base; a dustbin is about half a metre, a skip a couple.
 PROP_ART = [
-    ("trash_can",       28, t_can()),
-    ("trash_can_rusty", 28, t_can(rusty=True)),
-    ("trash_can_full",  28, t_can(lid=False, tipped=True)),
-    ("trash_skip",      48, t_skip()),
-    ("bollard",         12, t_bollard()),
-    ("postbox",         26, t_postbox()),
+    ("trash_can",       24, t_can()),
+    ("trash_can_rusty", 24, t_can(rusty=True)),
+    ("trash_can_full",  24, t_can(lid=False, tipped=True)),
+    ("trash_skip",      42, t_skip()),
+    ("bollard",         11, t_bollard()),
+    ("postbox",         23, t_postbox()),
 ]
 
 
@@ -664,14 +722,17 @@ def main():
     sheet = Image.new("RGBA", (COLS * CELL_W, rows * CELL_H), (0, 0, 0, 0))
     art = {}                       # name -> [col, row] in the big art sheet
     kinds = {}
-    floors, decals, kerbs = [], [], []
+    floors, decals = [], []
+    gaps = 0
 
     for i, (name, kind, walk, solid, paint) in enumerate(TILES):
         cell = Image.new("RGBA", (CELL_W, CELL_H), (0, 0, 0, 0))
         paint(ImageDraw.Draw(cell))
         if kind in ("flat", "decal"):
             mask = Image.new("L", (CELL_W, CELL_H), 0)
-            ImageDraw.Draw(mask).polygon(diamond(CX, CY), fill=255)
+            mask.paste(iso_mask(TILE_W, TILE_H), (0, CELL_H - TILE_H))
+            if kind == "flat":
+                gaps += close_to_mask(cell, mask)
             # Intersect with what is already there. Replacing the alpha outright
             # makes a decal's unpainted area opaque black.
             cell.putalpha(ImageChops.multiply(cell.getchannel("A"), mask))
@@ -683,8 +744,6 @@ def main():
             floors.append((name, cell))
         elif kind == "decal":
             decals.append((name, cell))
-        elif kind == "kerb":
-            kerbs.append((name, cell))
 
     # No blocks.png. Every tile used to be composited into one sheet, which is
     # why it still carried copies of the floors and decals that now live in
@@ -710,18 +769,44 @@ def main():
         floor_index[name] = [c, r]
     fsheet.save("sprites/street/floors.png")
 
-    # ---- kerbs, at the same footprint as a floor tile ---------------------
-    # A kerb is a floor tile with a lip, so it is drawn 96 px wide like one.
-    # The cell is 16 px taller than the tile to hold the lip, which means it
-    # overhangs by a third of a tile - the Kerbs layer is padded for that.
+    # ---- kerbs: a pavement tile whose edge HANGS over the road ------------
+    #
+    # A kerb is not an object standing on the pavement, it is the edge of the
+    # pavement. Drawn as a raised block it hides its own faces: the next tile
+    # along the run covers them with its raised top, so only the last one in a
+    # run keeps a visible lip and the whole thing reads as a flat band.
+    #
+    # Hanging the face BELOW the footprint inverts that, and the draw order
+    # then does the work for free:
+    #   - against more pavement, the neighbour's top sits exactly over the
+    #     hanging face and hides it, which is what a continuous footway wants;
+    #   - against the road, the neighbour is a FLOOR tile on the layer below,
+    #     so it cannot cover anything and the drop shows.
+    LIP = REF["kerb"]
+    kerb_h = TILE_H + LIP
+    kerb_src = [(n, c) for n, c in floors if n.startswith("flagstone")]
+    kerbs = []
+    for name, flat in kerb_src:
+        img = Image.new("RGBA", (TILE_W, kerb_h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        west = (0, TILE_H // 2)
+        south = (TILE_W // 2, TILE_H - 1)
+        east = (TILE_W - 1, TILE_H // 2)
+        d.polygon([west, south, (south[0], south[1] + LIP), (west[0], west[1] + LIP)],
+                  fill=C["flag_lo"])
+        d.polygon([south, east, (east[0], east[1] + LIP), (south[0], south[1] + LIP)],
+                  fill=C["stone_r"])
+        # the surface itself, exactly the floor tile so the footway is seamless
+        img.alpha_composite(flat.crop((0, CELL_H - TILE_H, TILE_W, CELL_H)), (0, 0))
+        kerbs.append((name + "_edge", img))
+
     kcols = 8
     krows = (len(kerbs) + kcols - 1) // kcols
-    ksheet = Image.new("RGBA", (kcols * TILE_W, krows * KERB_CELL_H), (0, 0, 0, 0))
+    ksheet = Image.new("RGBA", (kcols * TILE_W, krows * kerb_h), (0, 0, 0, 0))
     kerb_index = {}
     for n, (name, cell) in enumerate(kerbs):
         c, r = n % kcols, n // kcols
-        ksheet.alpha_composite(cell.crop((0, CELL_H - KERB_CELL_H, TILE_W, CELL_H)),
-                               (c * TILE_W, r * KERB_CELL_H))
+        ksheet.alpha_composite(cell, (c * TILE_W, r * kerb_h))
         kerb_index[name] = [c, r]
     ksheet.save("sprites/street/kerbs.png")
 
@@ -803,7 +888,7 @@ def main():
             "quarter_art_cell": [qcell_w, qcell_h],
             "floor_names": [n for n, _ in floors if n != "blank"],
             "floor_cell": [TILE_W, TILE_H],
-            "kerb_cell": [TILE_W, KERB_CELL_H],
+            "kerb_cell": [TILE_W, TILE_H + REF["kerb"]],
             "kerbs": kerb_index,        # kerbs.png, a floor diamond plus a lip
             "floors": floor_index,      # floors.png, one 96x48 diamond per cell
             "panel_cell": [PANEL_W, panel_size()[1]],
@@ -818,8 +903,10 @@ def main():
     print("walls.png      %dx%d  |  %d segments at %dx%d (%d layouts x 2 facings, %d bays each)"
           % (pw * 2, ph * (len(PANEL_LAYOUTS) + 1), len(panels), pw, ph,
              len(PANEL_LAYOUTS) + 1, PANEL_BAYS))
-    print("floors.png     %s  |  %d floor tiles at %dx%d" % (fsheet.size, len(floors), TILE_W, TILE_H))
-    print("kerbs.png      %s  |  %d kerbs at %dx%d" % (ksheet.size, len(kerbs), TILE_W, KERB_CELL_H))
+    print("floors.png     %s  |  %d floor tiles at %dx%d (%d edge pixels closed)"
+          % (fsheet.size, len(floors), TILE_W, TILE_H, gaps))
+    print("kerbs.png      %s  |  %d pavement-edge tiles at %dx%d (%d px lip)"
+          % (ksheet.size, len(kerbs), TILE_W, kerb_h, LIP))
     print("thin_walls.png %s  |  %d at %dx%d" % (qsheet.size, len(qart_index), qcell_w, qcell_h))
     print("decals.png     %s  |  %d tiles at %dx%d (%d decals x %d slices + 2 markers)"
           % (gsheet.size, len(grid_tiles), sw, sh, len(decals), SUB * SUB))
@@ -844,13 +931,20 @@ def main():
 # kinds, so "window + door" costs a line in PANEL_LAYOUTS rather than a new
 # painter. A bay is the reference's window spacing, half a floor tile.
 
-BAY_W = 48                       # one bay: the reference's window spacing
-BAY_RISE = 24                    # how far the base climbs across one bay
-PANEL_BAYS = 2                   # bays per panel - the segment size
-PANEL_H = 112                    # one storey
+# A cell's wall face is only TILE_W/2 = 32 px, too narrow to hold a 36 px door.
+# So a BAY is two cell faces, and a panel of two bays spans four cells.
+CELL_FACE = TILE_W // 2
+BAY_W = TILE_W                   # one bay = two cell faces = 64 px
+BAY_RISE = TILE_H                # how far the base climbs across one bay
+PANEL_BAYS = 1                   # bays per panel - the segment size
+PANEL_H = 88                     # one storey, deliberately squat
+# Architecture is drawn about 3/4 of life size against the character. A true
+# 2 m door would be 84 px next to his 76, and the street then towers; at 3/4 it
+# reads as a street you look over rather than up at. Stylised on purpose - the
+# numbers below are what it costs.
 PANEL_PAD = 1
 
-KERB_CELL_H = TILE_H + 16        # the diamond, plus headroom for the lip
+KERB_CELL_H = TILE_H + 20        # the diamond, plus headroom for the lip
 PANEL_W = BAY_W * PANEL_BAYS
 PANEL_RISE = BAY_RISE * PANEL_BAYS
 
@@ -1012,26 +1106,24 @@ BAYS = {
 # name -> (stone?, bay kinds). Brick throughout, as the block art is; stone is
 # kept for the odd civic frontage rather than being the whole ground floor.
 PANEL_LAYOUTS = [
-    ("plain",        False, ("plain", "plain")),
-    ("plain_b",      False, ("plain", "plain")),
-    ("windows",      False, ("window", "window")),
-    ("window_plain", False, ("window", "plain")),
-    ("plain_window", False, ("plain", "window")),
-    ("window_lit",   False, ("win_lit", "window")),
-    ("window_out",   False, ("win_out", "plain")),
-    ("window_pipe",  False, ("window", "pipe")),
-    ("poster",       False, ("poster", "plain")),
-    ("sign",         False, ("plain", "sign")),
-    ("vent",         False, ("vent", "plain")),
-    ("pipe",         False, ("pipe", "plain")),
-    ("g_plain",      False, ("plain", "plain")),
-    ("g_door",       False, ("door", "plain")),
-    ("g_door_win",   False, ("door", "window")),
-    ("g_windows",    False, ("window", "window")),
-    ("g_shop",       False, ("shop", "shop")),
-    ("g_shopdoor",   False, ("shop", "shopdoor")),
-    ("g_door_pipe",  False, ("door", "pipe")),
-    ("g_stone",      True,  ("window", "plain")),
+    ("plain",        False, ("plain",)),
+    ("plain_b",      False, ("plain",)),
+    ("window",       False, ("window",)),
+    ("window_b",     False, ("window",)),
+    ("window_lit",   False, ("win_lit",)),
+    ("window_out",   False, ("win_out",)),
+    ("pipe",         False, ("pipe",)),
+    ("poster",       False, ("poster",)),
+    ("sign",         False, ("sign",)),
+    ("vent",         False, ("vent",)),
+    ("g_plain",      False, ("plain",)),
+    ("g_door",       False, ("door",)),
+    ("g_window",     False, ("window",)),
+    ("g_shop",       False, ("shop",)),
+    ("g_shopdoor",   False, ("shopdoor",)),
+    ("g_pipe",       False, ("pipe",)),
+    ("g_stone",      True,  ("window",)),
+    ("g_stone_door", True,  ("door",)),
 ]
 
 

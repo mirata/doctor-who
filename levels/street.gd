@@ -91,10 +91,22 @@ func _collect_traceables() -> void:
 
 
 ## Big-cell coordinates, which the build's maps are indexed by.
+##
+## Derived from the layers rather than hard-coded: the fine grid and SUB have
+## both moved before now, and a trace that quietly reports the wrong cell is
+## worse than no trace.
 func _big_cell(p: Vector2) -> Vector2:
-	var fx: float = (p.x - 12.0) / 12.0
-	var fy: float = (p.y - 6.0) / 6.0
-	return Vector2(((fx + fy) / 2.0 - 1.5) / 4.0, ((fy - fx) / 2.0 - 1.5) / 4.0)
+	var fine := get_node_or_null("Nav") as TileMapLayer
+	var floors := get_node_or_null("Floor") as TileMapLayer
+	if fine == null or floors == null:
+		return Vector2.ZERO
+	var g: Vector2i = fine.tile_set.tile_size
+	var big: Vector2i = floors.tile_set.tile_size
+	var sub: float = float(big.x) / float(g.x)
+	var fx: float = (p.x - g.x * 0.5) / (g.x * 0.5)
+	var fy: float = (p.y - g.y * 0.5) / (g.y * 0.5)
+	var half: float = (sub - 1.0) * 0.5
+	return Vector2(((fx + fy) / 2.0 - half) / sub, ((fy - fx) / 2.0 - half) / sub)
 
 
 func _process(_delta: float) -> void:
