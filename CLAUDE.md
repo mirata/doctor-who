@@ -50,6 +50,7 @@ cancels the current click destination.
 | `dialogue/balloon/tardis_balloon.*` | The pixel-art dialogue balloon |
 | `fonts/PressStart2P-Regular.ttf` | Pixel font for UI text (SIL OFL, licence alongside) |
 | `addons/dialogue_manager/` | Third-party: Dialogue Manager 4.1.0 |
+| `levels/night.gd` | Night over the street — canvas tint plus the lamp pools, on one `night` knob |
 | `nav_region.gd` | Re-bakes a room's navmesh from live collision geometry on load |
 | `navigation/secondaryconsole_nav.tres` | Walkable floor outline for the console room |
 | `player.tscn` / `player.gd` | **The Doctor.** Walks on WASD. Owns the camera |
@@ -498,6 +499,78 @@ cell instead of the middle of the region.
 That is the general way to make *any* over-tall art into tiles, and it is why
 the kerb sheet can grow a taller lip without the grid changing. Only do it for
 things that must not occlude a character; everything else stays a sprite.
+
+### Night is a tint plus lights, and needs both
+`levels/night.gd` on the street's `Night` node. Two halves doing different
+jobs, and **either one alone fails**:
+
+| | |
+|---|---|
+| `Night/Tint` | a `CanvasModulate`, which **multiplies** the whole canvas |
+| `Night/Light*` | `PointLight2D`s in ADD mode, punching warm light back through it |
+
+Multiply alone gives a flat blue picture that reads as "the brightness is
+turned down", not as night. The lamps are what sell it.
+
+**A `CanvasModulate` only affects its own canvas**, which is exactly why the
+tint is not a full-screen `ColorRect`. The dialogue balloon (`CanvasLayer`
+100) and the fade (layer 128) sit above it and stay at full brightness —
+measured at full night, a white UI panel still renders `(1,1,1,1)` while the
+world renders `(0.12, 0.13, 0.20)`.
+
+One export drives everything: **`night`**, 0 day to 1 night. It lerps the tint
+and scales every light's energy, so the lamps cannot be left burning at noon.
+`cycle_seconds` (0 = hold still) runs a cosine cycle, which lingers at midday
+and midnight rather than sweeping through at a constant rate. Defaults live in
+`NIGHT_AT_BUILD` / `NIGHT_CYCLE_SECONDS` in the build script. The script is
+`@tool`, so dragging `night` in the Inspector updates the viewport.
+
+Things worth knowing before retuning it:
+
+- **A light's authored energy lives in `metadata/night_energy`, not in
+  `energy`.** `_apply()` writes `energy`, so reading it back to find the
+  original would ratchet the lamps down to nothing over a few calls. Metadata
+  is serialised into the scene, so it survives a save from the editor.
+- **A pool of light on the floor is an ellipse, not a circle.** The ground is a
+  2:1 isometric plane, so each light carries `scale = (1, 0.5)`; a round one
+  reads as a glowing ball hanging in front of the wall. Measured: 156 px across
+  by 79 down, ratio **1.97**.
+- **Lamp pools are derived from the `wall_lamp` props**, not listed twice, so
+  moving a lamp moves its light. Lights with no fitting drawn for them — lit
+  shop windows, the phone box — go in `NIGHT_LIGHTS`.
+- **Night is a hue shift, not just a dim.** At full night the blue channel is
+  the *brightest* (15.3 against 10.6 and 10.4) where in daylight it is the
+  darkest. A pure brightness drop looks like a broken monitor.
+- **The light texture is white**; the warm colour is the light's own `color`.
+  Texture sets the shape, `color` sets the hue, so recolouring a lamp does not
+  mean redrawing anything.
+- **A linear alpha ramp reads as a flat disc with a rim** — the eye finds the
+  end of a straight ramp. The gradient stops approximate an inverse-square
+  knee instead. No banding at this resolution: measured **119 distinct steps**
+  across a 240 px cut through the brightest pool.
+
+Verified: night is 59% of day brightness, the lights brighten 7.5% of the
+frame (peak +184 of 255), and a character standing in a pool has **96% of
+their pixels** lit — lights reach the characters, not just the scenery.
+
+`tools/nightshot.gd` renders day/dusk/evening/night with the Doctor standing in
+a pool, which is the only way to judge the light *on him* rather than on the
+floor:
+
+```
+godot --path . --script res://tools/nightshot.gd --resolution 1280x640
+```
+
+> Two traps in that harness, both of which produced silence rather than an
+> error. Returning `true` from `SceneTree._process` **quits**, so setting the
+> "done" flag before an `await` kills the coroutine mid-shot — guard entry and
+> completion with separate flags. And the Doctor owns a `top_level` camera that
+> is already current, so a test camera needs the existing ones disabled, then
+> `enabled = true` *before* `make_current()`.
+
+The node is generic — a `Node2D` with `night.gd`, a `CanvasModulate` child
+named `Tint`, and any number of `Light2D` children — so the console room can
+have one whenever it wants one.
 
 ### Solid things have to be carved out of the navmesh
 Collision and navigation are independent: the paving stone under a wall is still

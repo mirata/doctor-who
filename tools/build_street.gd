@@ -172,6 +172,107 @@ const PROPS := [
 ]
 
 
+
+# ── Night ─────────────────────────────────────────────────────────────────────
+# Extra pools of light, on top of the one every `wall_lamp` prop gets for free.
+# `at` is a big cell; `r` is the pool's radius in pixels along the ground.
+const NIGHT_LIGHTS := [
+	# the phone box glows from inside
+	{"at": Vector2(10.5, 2.6),  "r": 60.0,  "e": 0.85, "c": Color(1.0, 0.86, 0.62)},
+	# lit shop windows on the far side, spilling onto the pavement
+	{"at": Vector2(6.0, 3.1),   "r": 85.0,  "e": 0.60, "c": Color(1.0, 0.84, 0.55)},
+	{"at": Vector2(14.0, 3.1),  "r": 85.0,  "e": 0.60, "c": Color(1.0, 0.84, 0.55)},
+	# a lamp further down the road, no fitting drawn for it yet
+	{"at": Vector2(15.0, 7.0),  "r": 160.0, "e": 1.10, "c": Color(1.0, 0.80, 0.45)},
+]
+
+## Where the cycle sits when the level loads, and how fast it runs.
+##
+## Applied to the node so this is the one place the level's default lives.
+## Godot omits a value equal to the script default when it saves, so do not
+## read the scene file to find out what it is - read this. night.gd is `@tool`,
+## so dragging `night` in the Inspector updates the viewport live.
+const NIGHT_AT_BUILD := 1.0
+## 0 holds still. A running cycle under a conversation is a distraction, so it
+## is opt-in.
+const NIGHT_CYCLE_SECONDS := 0.0
+
+## How far a wall lamp throws, and what colour. Sodium rather than white.
+const LAMP_RADIUS := 150.0
+const LAMP_ENERGY := 1.45
+const LAMP_COLOUR := Color(1.0, 0.78, 0.42)
+
+
+## A soft round falloff, white so the light's own `color` sets the hue.
+##
+## Linear alpha reads as a flat disc with a visible rim - the eye finds the
+## edge of a straight ramp. These stops approximate an inverse-square knee:
+## bright in the middle, most of the fade happening early, a long faint tail.
+func _light_texture() -> GradientTexture2D:
+	var grad := Gradient.new()
+	grad.offsets = PackedFloat32Array([0.0, 0.25, 0.55, 0.8, 1.0])
+	grad.colors = PackedColorArray([
+		Color(1, 1, 1, 1.0), Color(1, 1, 1, 0.78), Color(1, 1, 1, 0.34),
+		Color(1, 1, 1, 0.10), Color(1, 1, 1, 0.0)])
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(1.0, 0.5)
+	tex.width = 128
+	tex.height = 128
+	return tex
+
+
+## Night tint plus the lamps. Returns how many lights were made.
+##
+## The lamp pools are derived from the `wall_lamp` entries in PROPS rather than
+## listed again, so moving a lamp moves its light. Anything with no fitting
+## drawn for it goes in NIGHT_LIGHTS.
+func _build_night(root: Node2D) -> int:
+	var night := Node2D.new()
+	night.name = "Night"
+	night.set_script(load("res://levels/night.gd"))
+	night.set("cycle_seconds", NIGHT_CYCLE_SECONDS)
+	night.set("night", NIGHT_AT_BUILD)
+	root.add_child(night)
+	night.owner = root
+
+	var tint := CanvasModulate.new()
+	tint.name = "Tint"
+	night.add_child(tint)
+	tint.owner = root
+
+	var tex := _light_texture()
+	var wanted := []
+	for prop in PROPS:
+		if String(prop["art"]) == "wall_lamp":
+			wanted.append({"at": prop["at"], "r": LAMP_RADIUS,
+				"e": LAMP_ENERGY, "c": LAMP_COLOUR})
+	for extra in NIGHT_LIGHTS:
+		wanted.append(extra)
+
+	var made := 0
+	for spec in wanted:
+		var light := PointLight2D.new()
+		light.name = "Light%d" % made
+		light.texture = tex
+		light.color = spec["c"]
+		light.energy = float(spec["e"])
+		light.set_meta("night_energy", float(spec["e"]))
+		light.blend_mode = Light2D.BLEND_MODE_ADD
+		light.texture_scale = float(spec["r"]) / 64.0
+		# A pool of light lying on the floor is an ELLIPSE on screen, not a
+		# circle: the ground is a 2:1 isometric plane. A round one reads as a
+		# glowing ball hanging in the air in front of the wall.
+		light.scale = Vector2(1.0, 0.5)
+		light.position = _big_to_local(null, spec["at"])
+		night.add_child(light)
+		light.owner = root
+		made += 1
+	return made
+
+
 ## `-- capture` diffs the scene on disk against a freshly generated one and
 ## writes the difference to street_edits.json, instead of saving. That is how
 ## an edit made in the editor becomes permanent: generate, compare, record.
@@ -1016,6 +1117,8 @@ func _build_scene(tileset: TileSet, floor_tileset: TileSet) -> void:
 	# does not immediately re-trigger it.
 	_add_character(root, "res://player.tscn", "Player", _big_to_local(null, Vector2(3.0, 3.0)))
 	_add_character(root, "res://sarah.tscn", "Sarah", _big_to_local(null, Vector2(3.6, 3.2)))
+
+	print("night lights: ", _build_night(root))
 
 	var door := Area2D.new()
 	door.name = "DoorTrigger"
