@@ -12,6 +12,7 @@ whether it is walkable or solid; tools/build_street.gd reads it.
 import hashlib
 import io as _io
 import json
+import math
 import os
 import random
 
@@ -100,18 +101,48 @@ def iso_mask(w, h):
 
     A polygon fill does NOT tile. Its edges are whatever the rasteriser decides,
     and two neighbours end up sharing no pixels along the seam - which shows as
-    a one-pixel gap down every tile edge, all over the floor. The 2:1 staircase
-    is defined per row, and the widths are fixed by area: the lattice places
-    tiles at ((x-y)*w/2, (x+y)*h/2), so one lattice cell is w*h/2 pixels and a
-    tile must cover exactly that or it gaps (too few) or overlaps (too many).
-    Rows of 2, 6, 10 ... w-2 and back down sum to precisely w*h/2."""
+    a one-pixel gap down every tile edge, all over the floor.
+
+    Widths are `4, 8, 12 ... w, w-4 ... 4`: **h-1 rows**, one row wider than
+    tall at the middle, and the top and bottom caps 4 px rather than 2. Two
+    properties fall out of that, and both matter:
+
+      - **every step of the edge is 2 across, 1 down.** No exceptions, not even
+        at the points. The obvious `2, 6 ... w-2, w-2 ... 6, 2` shape has the
+        same area and also tiles, but its widest row appears TWICE, so the east
+        and west extremes are a 2x2 stub with a 0-across step in the middle of
+        the staircase. Flat that is invisible; extruded into a raised surface
+        it becomes a two-column vertical bar at every point.
+      - **the points reach x=0 and x=w-1.** The stub version stops at x=1, so
+        consecutive raised faces stop two columns short of each other and
+        whatever is behind shows through the gap.
+
+    It is still exactly a fundamental domain - `w*h/2` pixels, verified laid on
+    the lattice at 0 gaps and 0 overlaps, every pixel covered exactly once -
+    so nothing about the tiling is traded away to get it.
+
+    **The spare row goes at the TOP.** h-1 rows in an h-tall cell leaves one
+    blank, and which end it sits at decides where the art lands relative to the
+    cell - which is what everything NOT made of tiles is aligned to. The walls
+    anchor on the cell's own vertices, `(-w/2, 0)` for a south-west face and
+    `(0, h/2)` for a south-east one. Putting the blank row at the top puts the
+    widest row on `y = h/2` and the south point on the cell's last row, so both
+    anchors land on the drawn edge. Put it at the bottom instead and the whole
+    floor rides one pixel high, which reads as the buildings having sunk into
+    the pavement.
+    """
+    rows = []
+    half_rows = h // 2
+    for j in range(half_rows):
+        rows.append(4 + 4 * j)                  # 4, 8 ... w
+    for j in range(half_rows - 1):
+        rows.append(w - 4 - 4 * j)              # w-4 ... 4
     m = Image.new("L", (w, h), 0)
     px = m.load()
-    half = w // 2
-    for j in range(h):
-        run = 2 * j + 1 if j < h // 2 else 2 * (h - 1 - j) + 1
-        for x in range(max(0, half - run), min(w, half + run)):
-            px[x, j] = 255
+    for j, run in enumerate(rows):
+        left = (w - run) // 2
+        for x in range(left, left + run):
+            px[x, j + 1] = 255                  # + 1: the blank row is row 0
     return m
 
 
@@ -756,29 +787,133 @@ def floor_tones():
     return tones
 
 
-def write_floors():
-    """One flat diamond per tone, on a square sheet.
+# The drop a surface shows where it meets something lower, in pixels. 0 is a
+# plain floor. The reference kerb is 6; the rest double from there, which gives
+# a kerb, a step, a raised forecourt and a low platform from one ramp.
+#
+# How far a surface stands proud of the ground, in pixels. 0 is a plain floor.
+# The reference kerb is 6; the rest double from there, which gives a kerb, a
+# step, a raised forecourt and a low platform off one ramp.
+#
+# The ceiling is SURFACE_HEADROOM - how much cell there is to draw into. Going
+# higher than that needs a taller cell, not a taller drawing: art that
+# overhangs its cell is dropped by Godot in a band along the top and left of
+# the whole map.
+#
+# A face only SHOWS where the neighbour is lower. Inside a field of one height
+# every face is covered by the tile in front of it, so the kerb appears along
+# the road and at corners without anything having to know where the edges are.
+THICKNESSES = [0, 3, 6, 12, 24]
 
-    `blank` is a fully transparent tile, used to pad layers whose art overhangs
-    their cell. It counts toward the grid, which is why there are 18 slots.
+
+def _extrude(piece, mask, rise, tone):
+    """The visible side faces, as the footprint's silhouette dragged downwards.
+
+    NOT a polygon. A polygon needs vertices, and every vertex is a guess at
+    where the diamond's corner is - the west one landed on x=0 when the mask
+    only ever reaches x=1, so the face came out a pixel wider than the surface
+    on each side, and the rasteriser's own edge stepped 2, 2, 3 instead of a
+    clean 2:1. Extruding inherits the mask's staircase exactly, so the face
+    edge cannot disagree with the surface edge - there is nothing left to get
+    wrong.
+
+    Nothing is widened or padded. The mask is the exact fundamental domain of
+    the lattice, so it stops at x=1 and its east and west points are a 2x2
+    stub; the face inherits that and shows a two-column vertical bar at each
+    point, with a two-column gap to the next tile's face along a kerb.
+
+    That is a deliberate trade, chosen over the alternatives:
+
+      - widening the FACE to x=0 and x=w-1 bridges the gap and makes the bar
+        three columns instead of two. Worse, and it patches the wrong layer.
+      - adding a full-width row to the MASK gives real points and makes the
+        faces meet, but the tile then overlaps its neighbours instead of
+        abutting them, and it is no longer an exact domain.
+
+    Exactness won. These are placeholders to be painted over, and a tile that
+    tiles exactly is worth more than a tidier stub.
+
+    Two tones, split at the south vertex, so the corner between the south-west
+    and south-east faces reads.
+    """
+    px = piece.load()
+    mpx = mask.load()
+    w, h = mask.size
+    sw = tuple(max(0, v - 18) for v in tone) + (255,)
+    se = tuple(max(0, v - 30) for v in tone) + (255,)
+
+    for x in range(w):
+        bottom = -1
+        for y in range(h):
+            if mpx[x, y]:
+                bottom = y
+        if bottom < 0:
+            continue
+        for y in range(bottom + 1, bottom + 1 + rise):
+            px[x, y] = sw if x < w // 2 else se
+
+
+def write_surfaces():
+    """Floors and kerbs as ONE list: every tone at every height.
+
+    A kerb is not a different kind of thing from a floor - it is a floor that
+    stands a little proud of what is next to it. Splitting them meant every
+    pavement cell carried two tiles on two layers and the map had to say the
+    same thing twice. Here a cell picks `pave_4` or `pave_4_t6` and that is the
+    whole decision.
+
+    ART IS ANCHORED TO THE BOTTOM OF THE CELL. The base diamond - where the
+    surface meets the ground - sits in the BOTTOM `TILE_H` of the cell, and
+    height is drawn upwards from there. That is the only anchoring that works
+    on a single layer:
+
+      - anchored to the top, height hangs BELOW the footprint, and the tile in
+        front is drawn after it and covers it. On its own layer above the floor
+        that was the point - the lip only showed against the road, which was on
+        a lower layer. Merge the layers and the road covers the lip too, and
+        the kerb disappears entirely. Measured: 0 visible kerb pixels.
+      - anchored to the bottom, height rises ABOVE the footprint, into the
+        cells behind, which are drawn earlier. So a raised surface occludes
+        what is behind it and nothing can paint over its face.
+
+    It is also the same convention as the wall panels, so there is one rule.
+
+    `blank` is fully transparent, for padding a layer whose art overhangs.
     """
     tones = floor_tones()
-    names = list(tones) + ["blank"]
-    cols = 3
-    rows = (len(names) + cols - 1) // cols
-    sheet = Image.new("RGBA", (cols * TILE_W, rows * TILE_H), (0, 0, 0, 0))
+    cell_h = TILE_H + SURFACE_HEADROOM
     mask = iso_mask(TILE_W, TILE_H)
+    mask_h = mask.size[1]
+
+    names = []
+    for name in tones:
+        for rise in THICKNESSES:
+            names.append((name if rise == 0 else "%s_t%d" % (name, rise), name, rise))
+    names.append(("blank", None, 0))
+
+    # square-ish, and the cell is square, so the grid may as well be
+    cols = int(math.ceil(math.sqrt(len(names))))
+    rows = (len(names) + cols - 1) // cols
+    sheet = Image.new("RGBA", (cols * TILE_W, rows * cell_h), (0, 0, 0, 0))
     index = {}
-    for n, name in enumerate(names):
-        cell = Image.new("RGBA", (TILE_W, TILE_H), (0, 0, 0, 0))
-        if name != "blank":
-            flat = Image.new("RGBA", (TILE_W, TILE_H), tones[name] + (255,))
-            cell.paste(flat, (0, 0), mask)
+    for n, (label, tone, rise) in enumerate(names):
+        cell = Image.new("RGBA", (TILE_W, cell_h), (0, 0, 0, 0))
+        if tone is not None:
+            # drawn top-face-first into a piece exactly as tall as it needs,
+            # then dropped so its BASE sits on the bottom of the cell
+            piece = Image.new("RGBA", (TILE_W, mask_h + rise), (0, 0, 0, 0))
+            if rise > 0:
+                _extrude(piece, mask, rise, tones[tone])
+            # the walking surface, exactly the tone, so a raised tile is
+            # seamless against a flat one of the same tone
+            surface = Image.new("RGBA", (TILE_W, mask_h), tones[tone] + (255,))
+            piece.paste(surface, (0, 0), mask)
+            cell.alpha_composite(piece, (0, cell_h - piece.height))
         c, r = n % cols, n // cols
-        sheet.alpha_composite(cell, (c * TILE_W, r * TILE_H))
-        index[name] = [c, r]
-    save_sheet(sheet, "sprites/street/floors.png", _MANIFEST)
-    return index, tones, sheet.size
+        sheet.alpha_composite(cell, (c * TILE_W, r * cell_h))
+        index[label] = [c, r]
+    save_sheet(sheet, "sprites/street/surfaces.png", _MANIFEST)
+    return index, tones, sheet.size, cell_h, cols, rows
 
 
 # --------------------------------------------------- not clobbering art ----
@@ -858,77 +993,8 @@ def main():
     # t_wall...), so reviving a solid cube is a matter of emitting a sheet
     # again; the stale image is not worth keeping around to confuse things.
 
-    # ---- floors: flat tones, no pattern ----------------------------------
-    floor_index, tones, floor_size = write_floors()
-
-    # ---- kerbs: a pavement tile whose edge HANGS over the road ------------
-    #
-    # A kerb is not an object standing on the pavement, it is the edge of the
-    # pavement. Drawn as a raised block it hides its own faces: the next tile
-    # along the run covers them with its raised top, so only the last one in a
-    # run keeps a visible lip and the whole thing reads as a flat band.
-    #
-    # Hanging the face BELOW the footprint inverts that, and the draw order
-    # then does the work for free:
-    #   - against more pavement, the neighbour's top sits exactly over the
-    #     hanging face and hides it, which is what a continuous footway wants;
-    #   - against the road, the neighbour is a FLOOR tile on the layer below,
-    #     so it cannot cover anything and the drop shows.
-    # A kerb is TWO choices - which surface, and how far it drops - so the set
-    # is that grid rather than a hand-picked list. Naming it `<tone>_edge<lip>`
-    # means the builder can ask for any combination without the sheet having to
-    # anticipate it, and a new tone brings its kerbs with it for free.
-    #
-    # The drops are measured against the reference's 6 px kerb: `_low` is a
-    # dropped crossing, `_high` a raised footway. A kerb is a lip you step
-    # over, not a step you climb - at 12 px it reads as the latter, so the tall
-    # one stops at 10.
-    LIPS = [("_low", 3), ("", REF["kerb"]), ("_high", 10)]
-    # Every surface a footway can be made of. Road tones are excluded: a road
-    # has no kerb, it is what the kerb drops TO.
-    KERB_TONES = [n for n in tones
-                  if n.split("_")[0] in ("pave", "dirt", "shade")]
-    # The cell leaves room for a lip of up to KERB_HEADROOM, more than the
-    # tallest drawn here, so a taller variation can be painted by hand without
-    # the sheet being resized and everything re-indexed. The spare rows are
-    # transparent and cost nothing.
-    #
-    # Keep it EVEN: the footprint has to land on a whole pixel, and the tile's
-    # texture_origin is -(cell_h - TILE_H) / 2.
-    kerb_h = TILE_H + KERB_HEADROOM
-    kerb_mask = iso_mask(TILE_W, TILE_H)
-    kerbs = []
-    for name in KERB_TONES:
-        for suffix, lip in LIPS:
-            img = Image.new("RGBA", (TILE_W, kerb_h), (0, 0, 0, 0))
-            d = ImageDraw.Draw(img)
-            west = (0, TILE_H // 2)
-            south = (TILE_W // 2, TILE_H - 1)
-            east = (TILE_W - 1, TILE_H // 2)
-            d.polygon([west, south, (south[0], south[1] + lip),
-                       (west[0], west[1] + lip)],
-                      fill=tuple(max(0, v - 18) for v in tones[name]))
-            d.polygon([south, east, (east[0], east[1] + lip),
-                       (south[0], south[1] + lip)],
-                      fill=tuple(max(0, v - 30) for v in tones[name]))
-            # the surface itself, exactly the floor tone, so the footway is
-            # seamless against the plain floor tiles beside it
-            surface = Image.new("RGBA", (TILE_W, TILE_H), tones[name] + (255,))
-            img.paste(surface, (0, 0), kerb_mask)
-            kerbs.append((name + "_edge" + suffix, img))
-
-    # 6 x 8 is exactly square at a 64x48 cell (4 cols = 3 rows), which is the
-    # shape an image model handles best - and it leaves spare slots to paint
-    # into without reshuffling the index.
-    kcols, krows = 6, 8
-    assert len(kerbs) <= kcols * krows, "%d kerbs will not fit" % len(kerbs)
-    ksheet = Image.new("RGBA", (kcols * TILE_W, krows * kerb_h), (0, 0, 0, 0))
-    kerb_index = {}
-    for n, (name, cell) in enumerate(kerbs):
-        c, r = n % kcols, n // kcols
-        ksheet.alpha_composite(cell, (c * TILE_W, r * kerb_h))
-        kerb_index[name] = [c, r]
-    save_sheet(ksheet, "sprites/street/kerbs.png", manifest)
+    # ---- surfaces: floors and kerbs, one list ----------------------------
+    surf_index, tones, surf_size, surf_cell_h, surf_cols, surf_rows = write_surfaces()
 
     # ---- the quarter-grid sheet Godot actually lays down -------------------
     sw, sh = TILE_W // SUB, TILE_H // SUB
@@ -1006,11 +1072,12 @@ def main():
             "grid_tile_size": [sw, sh],
             # kind "kerb" -> placed as tiles; anything else -> drawn as a sprite
             "quarter_art_cell": [qcell_w, qcell_h],
-            "floor_names": [n for n in tones],
-            "floor_cell": [TILE_W, TILE_H],
-            "kerb_cell": [TILE_W, TILE_H + KERB_HEADROOM],
-            "kerbs": kerb_index,        # kerbs.png, a floor diamond plus a lip
-            "floors": floor_index,      # floors.png, one 96x48 diamond per cell
+            "tones": [n for n in tones],
+            "thicknesses": THICKNESSES,
+            # surfaces.png: the cell is taller than the tile, and the surface
+            # diamond sits in the top TILE_H of it
+            "surface_cell": [TILE_W, TILE_H + SURFACE_HEADROOM],
+            "surfaces": surf_index,
             "panel_cell": [PANEL_W, panel_size()[1]],
             "panel_height": PANEL_H,
             "panel_rise": PANEL_RISE,
@@ -1024,12 +1091,10 @@ def main():
     print("walls.png      %dx%d  |  %d segments at %dx%d, %d pairs x %d rows (aspect %.2f)"
           % (pw * 2 * PAIRS_PER_ROW, ph * _wr, len(panels), pw, ph,
              PAIRS_PER_ROW, _wr, (pw * 2.0 * PAIRS_PER_ROW) / (ph * _wr)))
-    print("floors.png     %s  |  %d flat tones + blank at %dx%d (aspect %.2f)"
-          % (floor_size, len(tones), TILE_W, TILE_H, floor_size[0] / float(floor_size[1])))
-    print("kerbs.png      %s  |  %d = %d tones x %d lips at %dx%d (%d spare, room for %d px, aspect %.2f)"
-          % (ksheet.size, len(kerbs), len(KERB_TONES), len(LIPS), TILE_W, kerb_h,
-             kcols * krows - len(kerbs), KERB_HEADROOM,
-             ksheet.size[0] / float(ksheet.size[1])))
+    print("surfaces.png   %s  |  %d = %d tones x %d thicknesses (+blank) at %dx%d, %dx%d grid (aspect %.2f)"
+          % (surf_size, len(surf_index), len(tones), len(THICKNESSES),
+             TILE_W, surf_cell_h, surf_cols, surf_rows,
+             surf_size[0] / float(surf_size[1])))
     print("thin_walls.png %s  |  %d at %dx%d" % (qsheet.size, len(qart_index), qcell_w, qcell_h))
     print("decals.png     %s  |  %d tiles at %dx%d (%d decals x %d slices + 2 markers)"
           % (gsheet.size, len(grid_tiles), sw, sh, len(decals), SUB * SUB))
@@ -1077,7 +1142,7 @@ PANEL_H = 88                     # one storey, deliberately squat
 PANEL_PAD = 1
 PAIRS_PER_ROW = 4                # layout pairs across the sheet
 
-KERB_HEADROOM = 16               # room below the diamond for the lip, max lip height
+SURFACE_HEADROOM = 32            # room below the diamond for an edge; see THICKNESSES
 PANEL_W = BAY_W * PANEL_BAYS
 PANEL_RISE = BAY_RISE * PANEL_BAYS
 
@@ -1257,13 +1322,59 @@ PANEL_LAYOUTS = [
     ("g_pipe",       False, ("pipe",)),
     ("g_stone",      True,  ("window",)),
     ("g_stone_door", True,  ("door",)),
+    # lit at street level, which the night lighting has something to say about
+    ("g_window_lit", False, ("win_lit",)),
 ]
 
 
-def paint_panel(d, side, stone, kinds, h=PANEL_H, seed=0):
-    body = (C["stone_l"] if side == "l" else C["stone_r"]) if stone else \
-           (C["brick_l"] if side == "l" else C["brick_r"])
-    d.polygon(panel_quad(side, 0, 1, 0, 1, h), fill=body)
+def panel_step(x):
+    """How far the base has climbed by column x, in pixels.
+
+    `(x + 1) // 2`, not `x // 2`. Both step 2 across for 1 down through the
+    middle, but this one reaches PANEL_RISE exactly at the last column instead
+    of finishing one short - and it pays for that by making the FIRST and LAST
+    runs one column wide rather than two.
+
+    That is exactly what lets consecutive panels join. Panel A's last column
+    and panel B's first are both single-column runs at the same height, so put
+    together they make the two-wide run the staircase wants. A run of panels is
+    then one unbroken 2:1 line, and the only half-steps in it are at the two
+    ends of the whole run, where the wall stops anyway.
+    """
+    return (x + 1) // 2
+
+
+def panel_mask(side, h=PANEL_H):
+    """The panel's exact silhouette, built COLUMN BY COLUMN.
+
+    The body used to be a rasterised polygon, and a polygon's slanted edges are
+    whatever the rasteriser decides - the same thing that stopped the floor
+    diamond tiling. On a wall it showed as a base that stepped 2, 2, 3 instead
+    of holding a clean 2:1. Deriving each column's height from `panel_step`
+    means the edge cannot be anything else.
+
+    It is also used to CLIP the finished panel, so no amount of brickwork,
+    window frames or string courses drawn on top can push a pixel past the
+    silhouette. The features are free to be sloppy at the edges; the outline
+    is not.
+    """
+    w, cell_h = panel_size(h)
+    m = Image.new("L", (w, cell_h), 0)
+    px = m.load()
+    for x in range(w):
+        climb = panel_step(x)
+        base = PANEL_PAD + h + (PANEL_RISE - climb if side == "r" else climb)
+        for y in range(base - h + 1, base + 1):
+            if 0 <= y < cell_h:
+                px[x, y] = 255
+    return m
+
+
+def paint_panel(cell, side, stone, kinds, h=PANEL_H, seed=0):
+    mask = panel_mask(side, h)
+    body = (C["stone_l"] if side == "l" else C["stone_r"]) if stone else            (C["brick_l"] if side == "l" else C["brick_r"])
+    cell.paste(Image.new("RGBA", cell.size, body + (255,)), (0, 0), mask)
+    d = ImageDraw.Draw(cell)
     panel_courses(d, side, h, C["mortar"],
                   course=REF["course"] * 2 if stone else None,
                   seed=seed + 3, per_bay=2 if stone else 4)
@@ -1273,14 +1384,17 @@ def paint_panel(d, side, stone, kinds, h=PANEL_H, seed=0):
     # a string course capping the storey, which is what makes them stack
     d.line([panel_pt(side, 0, 0.995, h), panel_pt(side, 1, 0.995, h)],
            fill=C["stone"])
+    _clip_to_panel(cell, mask)
 
 
-def paint_quoin(d, side, h=PANEL_H):
+def paint_quoin(cell, side, h=PANEL_H):
     """The dressed-stone corner column the reference puts at every junction.
     One bay wide, so it butts against a panel rather than replacing one."""
+    mask = panel_mask(side, h)
     body = C["stone_l"] if side == "l" else C["stone_r"]
+    cell.paste(Image.new("RGBA", cell.size, body + (255,)), (0, 0), mask)
+    d = ImageDraw.Draw(cell)
     u1 = 1.0 / PANEL_BAYS
-    d.polygon(panel_quad(side, 0, u1, 0, 1, h), fill=body)
     n = max(2, int(round(h / (REF["course"] * 2.5))))
     for k in range(1, n):
         v = k / float(n)
@@ -1290,16 +1404,31 @@ def paint_quoin(d, side, h=PANEL_H):
         u = u1 * (0.62 if k % 2 else 0.38)
         d.line([panel_pt(side, u, v0, h), panel_pt(side, u, v1, h)], fill=C["mortar"])
     d.line([panel_pt(side, 0, 0, h), panel_pt(side, 0, 1, h)], fill=C["stone_hi"])
+    _clip_to_panel(cell, mask)
+
+
+def _clip_to_panel(cell, mask):
+    """Intersect the cell's alpha with the silhouette.
+
+    MULTIPLY, not `putalpha(mask)`: replacing the alpha would turn every
+    unpainted pixel inside the outline opaque, which is the same trap the
+    decals hit. Multiplying can only ever remove, which is all that is wanted -
+    the body fill has already covered everything inside.
+    """
+    cell.putalpha(ImageChops.multiply(cell.getchannel("A"), mask))
 
 
 def write_panels():
     """One sheet of wall segments, both facings, indexed by name.
 
     Laid out as a GRID rather than a two-column ribbon. At one pair per row the
-    sheet came out 128x2318 - a 1:18 strip, which is awkward to look at and
+    sheet came out 128x2440 - a 1:19 strip, which is awkward to look at and
     worse to hand to an image model. Four pairs across gives 512x610, near
     enough square, and each layout's _l and _r stay side by side so a facing
     pair can be repainted together and stay consistent.
+
+    The entry count is deliberately a multiple of PAIRS_PER_ROW so the last row
+    is full - a ragged final row wastes sheet and reads as a mistake.
 
     The builder reads `panels[name] = [col, row]` and works the region out from
     the cell size, so the arrangement can change freely - nothing else cares.
@@ -1314,11 +1443,10 @@ def write_panels():
         gx, gy = i % PAIRS_PER_ROW, i // PAIRS_PER_ROW
         for k, side in enumerate(("l", "r")):
             cell = Image.new("RGBA", (pw, ph), (0, 0, 0, 0))
-            d = ImageDraw.Draw(cell)
             if name == "quoin":
-                paint_quoin(d, side, PANEL_H)
+                paint_quoin(cell, side, PANEL_H)
             else:
-                paint_panel(d, side, stone, kinds, PANEL_H, i)
+                paint_panel(cell, side, stone, kinds, PANEL_H, i)
             col = gx * 2 + k
             sheet.alpha_composite(cell, (col * pw, gy * ph))
             index["%s_%s" % (name, side)] = [col, gy]

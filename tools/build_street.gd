@@ -20,9 +20,10 @@ extends SceneTree
 
 const TILES_JSON := "res://sprites/street/tiles.json"
 # One sheet per job. Anything not listed here is not placed by this build.
-const FLOOR_SHEET := "res://sprites/street/floors.png"    # 96x48 floor diamonds
+## Floors AND kerbs. A kerb is a floor with a visible edge, not a different
+## kind of thing, so they are one list on one layer - see _build_floor_tileset.
+const SURFACE_SHEET := "res://sprites/street/surfaces.png"
 const DECAL_SHEET := "res://sprites/street/decals.png"    # 24x12 decal slices
-const KERB_SHEET := "res://sprites/street/kerbs.png"      # 96x64 kerbs
 const THIN_WALL_SHEET := "res://sprites/street/thin_walls.png"  # 24x36 low walls
 const WALL_SHEET := "res://sprites/street/walls.png"
 const FLOOR_TILESET_OUT := "res://levels/street_floor_tileset.tres"
@@ -40,10 +41,11 @@ var ART := Vector2i(96, 48)         # the drawn floor diamond
 
 var GRID_TILES := {}                # name -> {atlas, layer, walkable, solid}
 var QUARTER_ART := {}               # name -> Vector2i in the quarter sheet
-var KERB_TILES := {}                # the subset placed as tiles, not sprites
 var QUARTER_CELL := Vector2i(24, 36)
-var KERB_CELL := Vector2i(96, 64)
-var FLOOR_COORDS := {}              # floor name -> its 96x48 region in the sheet
+## The surface sheet's cell, TALLER than the tile: the diamond sits in the top
+## ART.y of it and any edge hangs below.
+var SURFACE_CELL := Vector2i(64, 64)
+var SURFACE_COORDS := {}            # surface name -> its region in the sheet
 var _carved := 0                    # floor cells taken out from under props
 
 # ---------------------------------------------------------------- the map --
@@ -84,19 +86,23 @@ const BLOCKS := [
 ## a floor is comfortable to author and paint at; the fineness that the quarter
 ## grid bought has moved to the invisible navigation and collision layers,
 ## where it was the only thing that actually needed it.
+## What each map letter is made of. A name ending `_t<N>` shows an N px edge
+## where it meets something lower, so the pavement letters carry the kerb and
+## there is no second map to keep in step. The road is flat: a road has no
+## kerb, it is what the kerb drops TO.
 const FLOOR_KEY := {
 	"a": ["road_4", "road_5", "road_3"],
 	"b": ["road_3", "road_4", "road_5"],
-	"p": ["pave_4", "pave_5", "pave_3"],
+	"p": ["pave_4_t6", "pave_5_t6", "pave_3_t6"],
 	".": ["road_2", "road_3", "road_4"],
-	"k": ["pave_4", "pave_5"],
-	"x": ["pave_3", "pave_4"],
-	"g": ["pave_2"],
+	"k": ["pave_4_t6", "pave_5_t6"],
+	"x": ["pave_3_t6", "pave_4_t6"],
+	"g": ["pave_2_t6"],
 	"m": ["road_2"],
 	"u": ["shade_2"],
 	"t": ["road_1"],
 	"d": ["dirt_1", "dirt_2", "dirt_3"],
-	"B": ["pave_4", "pave_5"],
+	"B": ["pave_4_t6", "pave_5_t6"],
 }
 # Only things that genuinely fill a tile belong here. Street furniture does
 # not: a block is 96 px wide by definition, so a crate laid this way is the
@@ -106,21 +112,6 @@ const BLOCK_KEY := {
 	"D": ["wall_door"],
 	"S": ["stone_wall"],
 }
-# Kerbs sit on the floor map, so the ground layer gets a flat stand-in under
-# them and the lip itself is painted on the Kerbs layer.
-## Kerb variants, chosen per BIG cell rather than per fine cell: at quarter
-## resolution there are 16 tiles to a big one, so rolling per tile scatters
-## weeds and chips sixteen times as thickly and the kerb reads as speckled.
-## Every pavement cell gets an edge tile, not just the row beside the road.
-## The pavement IS the kerb: each tile hangs its drop below itself, the next
-## pavement tile covers it, and only the boundary with the road shows a lip.
-const KERB_KEY := {
-	"p": ["pave_4_edge", "pave_5_edge", "pave_3_edge"],
-	"B": ["pave_4_edge", "pave_5_edge"],
-	"k": ["pave_4_edge", "pave_5_edge"],
-	"x": ["pave_3_edge", "pave_4_edge"],
-}
-
 ## Roughly what percentage of QUARTER floor cells get a decal.
 const DECAL_DENSITY := 5
 
@@ -203,25 +194,11 @@ const LAMP_ENERGY := 1.45
 const LAMP_COLOUR := Color(1.0, 0.78, 0.42)
 
 
-## A soft round falloff, white so the light's own `color` sets the hue.
-##
-## Linear alpha reads as a flat disc with a visible rim - the eye finds the
-## edge of a straight ramp. These stops approximate an inverse-square knee:
-## bright in the middle, most of the fade happening early, a long faint tail.
-func _light_texture() -> GradientTexture2D:
-	var grad := Gradient.new()
-	grad.offsets = PackedFloat32Array([0.0, 0.25, 0.55, 0.8, 1.0])
-	grad.colors = PackedColorArray([
-		Color(1, 1, 1, 1.0), Color(1, 1, 1, 0.78), Color(1, 1, 1, 0.34),
-		Color(1, 1, 1, 0.10), Color(1, 1, 1, 0.0)])
-	var tex := GradientTexture2D.new()
-	tex.gradient = grad
-	tex.fill = GradientTexture2D.FILL_RADIAL
-	tex.fill_from = Vector2(0.5, 0.5)
-	tex.fill_to = Vector2(1.0, 0.5)
-	tex.width = 128
-	tex.height = 128
-	return tex
+## The pool ART - how many bands, how fast they fall off, how much they are
+## dithered - lives on the Night node as exported properties, not here. It is
+## generated at runtime so those are live knobs rather than a rebuild, and so
+## the scene does not carry an ImageTexture's raw pixels. All this has to do is
+## say how big each pool is.
 
 
 ## Night tint plus the lamps. Returns how many lights were made.
@@ -243,7 +220,6 @@ func _build_night(root: Node2D) -> int:
 	night.add_child(tint)
 	tint.owner = root
 
-	var tex := _light_texture()
 	var wanted := []
 	for prop in PROPS:
 		if String(prop["art"]) == "wall_lamp":
@@ -256,16 +232,13 @@ func _build_night(root: Node2D) -> int:
 	for spec in wanted:
 		var light := PointLight2D.new()
 		light.name = "Light%d" % made
-		light.texture = tex
 		light.color = spec["c"]
 		light.energy = float(spec["e"])
 		light.set_meta("night_energy", float(spec["e"]))
+		# night.gd builds the texture from this, at exactly this size, so
+		# nothing is ever resampled - which is what keeps the dither intact
+		light.set_meta("radius", float(spec["r"]))
 		light.blend_mode = Light2D.BLEND_MODE_ADD
-		light.texture_scale = float(spec["r"]) / 64.0
-		# A pool of light lying on the floor is an ELLIPSE on screen, not a
-		# circle: the ground is a 2:1 isometric plane. A round one reads as a
-		# glowing ball hanging in the air in front of the wall.
-		light.scale = Vector2(1.0, 0.5)
 		light.position = _big_to_local(null, spec["at"])
 		night.add_child(light)
 		light.owner = root
@@ -295,11 +268,9 @@ func _load_catalogue() -> void:
 	SUB = int(raw["sub"])
 	GRID = Vector2i(int(raw["grid_tile_size"][0]), int(raw["grid_tile_size"][1]))
 	ART = Vector2i(int(raw["art_tile_size"][0]), int(raw["art_tile_size"][1]))
-	KERB_CELL = Vector2i(int(raw["kerb_cell"][0]), int(raw["kerb_cell"][1]))
-	for name in raw["kerbs"]:
-		KERB_TILES[name] = Vector2i(int(raw["kerbs"][name][0]), int(raw["kerbs"][name][1]))
-	for name in raw["floors"]:
-		FLOOR_COORDS[name] = Vector2i(int(raw["floors"][name][0]), int(raw["floors"][name][1]))
+	SURFACE_CELL = Vector2i(int(raw["surface_cell"][0]), int(raw["surface_cell"][1]))
+	for name in raw["surfaces"]:
+		SURFACE_COORDS[name] = Vector2i(int(raw["surfaces"][name][0]), int(raw["surfaces"][name][1]))
 	for name in raw["grid"]:
 		GRID_TILES[name] = raw["grid"][name]
 	BAY_W = int(ART.x / 2)
@@ -314,7 +285,7 @@ func _load_catalogue() -> void:
 		QUARTER_ART[name] = Vector2i(int(q["atlas"][0]), int(q["atlas"][1]))
 	_sort_panel_families()
 	print("catalogue: %d decal tiles at %s, %d floors at %s, %d wall panels at %s, sub=%d"
-		% [GRID_TILES.size(), str(GRID), FLOOR_COORDS.size(), str(ART),
+		% [GRID_TILES.size(), str(GRID), SURFACE_COORDS.size(), str(ART),
 		PANELS.size(), str(PANEL_CELL), SUB])
 
 
@@ -496,27 +467,6 @@ func _assert_alignment(layer: TileMapLayer) -> void:
 				% [str(big), str(q - layer.map_to_local(fine))])
 
 
-## Kerbs draw above the floor but never sort against anything: 96 px of art
-## judged from one point puts its lip across the shins of anyone standing just
-## north of that point. A 4 px lip could only ever hide 4 px of a character, so
-## it is pinned below everything that walks instead of being sorted at all.
-const KERB_Z := -50
-const KERB_SOURCE := 1
-
-
-## The kerb lip, painted on its own layer at quarter resolution.
-func _paint_kerbs(layer: TileMapLayer) -> int:
-	var laid := 0
-	for y in GROUND.size():
-		var row: String = GROUND[y]
-		for x in row.length():
-			if not KERB_KEY.has(row[x]):
-				continue
-			var pick: String = _pick(KERB_KEY[row[x]], x, y)
-			_note("kerb 96x64", pick)
-			layer.set_cell(Vector2i(x, y), KERB_SOURCE, KERB_TILES[pick])
-			laid += 1
-	return laid
 func _place_props(parent: Node2D, nav: TileMapLayer, owner_node: Node) -> int:
 	var made := 0
 	for prop in PROPS:
@@ -882,7 +832,16 @@ func _spawn_facades(parent: Node2D, owner_node: Node) -> int:
 				var fit: int = mini(bays, n - i)
 				var cell := Vector2i(x, run_start - i)
 				# south vertex of the lowest cell in this panel
-				var anchor: Vector2 = _big_to_local(null, Vector2(cell)) + Vector2(0, ART.y / 2.0)
+				# ART.y / 2 is the cell's south vertex in CONTINUOUS terms, but
+				# the cell's last drawn row is one above it: rows run
+				# -ART.y/2 .. ART.y/2 - 1. Anchoring on the continuous vertex
+				# puts the wall's foot on the first row of the tile IN FRONT
+				# rather than on the last row of its own, which reads as the
+				# building having sunk a pixel into the pavement.
+				#
+				# The west vertex needs no such correction: columns run
+				# -ART.x/2 .. ART.x/2 - 1, so -ART.x/2 is a real column.
+				var anchor: Vector2 = _big_to_local(null, Vector2(cell)) + Vector2(0, ART.y / 2.0 - 1.0)
 				if _storeys_at(cell.x, cell.y) > 0:
 					_bays_covered += fit
 				made += _spawn_wall(parent, owner_node, "r", cell, fit,
@@ -902,29 +861,32 @@ func _build_floor_tileset() -> TileSet:
 	ts.tile_layout = TileSet.TILE_LAYOUT_DIAMOND_DOWN
 	ts.tile_offset_axis = TileSet.TILE_OFFSET_AXIS_HORIZONTAL
 	ts.tile_size = ART
-	# floors.png holds one 96x48 diamond per cell, the same size as the tile.
-	# A cell BIGGER than the tile overhangs, and Godot drops overhanging art in
-	# a band along the top and left of the map - so the sheet is cut to size
-	# rather than compensated for with texture_origin.
+	# ONE source for floors and kerbs alike. They were two, with two cell
+	# sizes on two layers, which meant every pavement cell carried a flat tile
+	# and an edge tile stacked on it and the map had to say the same thing
+	# twice. A kerb is a floor with a visible edge; one list says that.
+	#
+	# The cell is TALLER than the tile so a surface can stand proud of the
+	# ground. The art is anchored to the BOTTOM of its cell - base diamond in
+	# the bottom ART.y, height rising above it - so texture_origin pushes the
+	# art DOWN by half the excess to put that base, rather than the middle of
+	# the region, on the cell.
+	#
+	# Measured, because the sign is easy to get backwards and the symptom is
+	# not obvious: at +16 the base lands at y -16..+16 of the cell and the
+	# height rises to -40. Top-anchored art with the opposite sign also tiles
+	# perfectly and looks fine - it just hides every kerb, because the face
+	# then hangs below the footprint where the tile in front paints over it.
+	# Keep the excess EVEN or the base lands on half a pixel.
 	var src := TileSetAtlasSource.new()
-	src.texture = load(FLOOR_SHEET)
-	src.texture_region_size = ART
+	src.texture = load(SURFACE_SHEET)
+	src.texture_region_size = SURFACE_CELL
 	ts.add_source(src, 0)
-	for name in FLOOR_COORDS:
-		src.create_tile(FLOOR_COORDS[name])
-
-	# Kerbs sit on the same grid as the floor - a kerb IS a floor tile with a
-	# lip. The cell is taller than the tile to hold that lip, so the art is
-	# lifted onto its footprint and the layer is padded for the overhang.
-	var kerb_src := TileSetAtlasSource.new()
-	kerb_src.texture = load(KERB_SHEET)
-	kerb_src.texture_region_size = KERB_CELL
-	ts.add_source(kerb_src, KERB_SOURCE)
-	for kname in KERB_TILES:
-		var kc: Vector2i = KERB_TILES[kname]
-		kerb_src.create_tile(kc)
-		kerb_src.get_tile_data(kc, 0).texture_origin = Vector2i(
-			0, -(KERB_CELL.y - ART.y) / 2)
+	var lift := Vector2i(0, (SURFACE_CELL.y - ART.y) / 2)
+	for name in SURFACE_COORDS:
+		var at: Vector2i = SURFACE_COORDS[name]
+		src.create_tile(at)
+		src.get_tile_data(at, 0).texture_origin = lift
 	return ts
 
 
@@ -936,10 +898,10 @@ func _paint_floor(layer: TileMapLayer) -> int:
 			if not FLOOR_KEY.has(row[x]):
 				continue
 			var name: String = _pick(FLOOR_KEY[row[x]], x, y)
-			if not FLOOR_COORDS.has(name):
+			if not SURFACE_COORDS.has(name):
 				continue
-			_note("floor 96x48", name)
-			layer.set_cell(Vector2i(x, y), 0, FLOOR_COORDS[name])
+			_note("surface %dx%d" % [ART.x, SURFACE_CELL.y], name)
+			layer.set_cell(Vector2i(x, y), 0, SURFACE_COORDS[name])
 			laid += 1
 	return laid
 
@@ -1036,7 +998,15 @@ func _build_scene(tileset: TileSet, floor_tileset: TileSet) -> void:
 	floors.name = "Floor"
 	floors.tile_set = floor_tileset
 	floors.z_index = -100
-	print("floor cells: ", _paint_floor(floors))
+	var floor_cells: int = _paint_floor(floors)
+	# The surface art is taller than its tile, and Godot drops overhanging art
+	# in a band along the top and left of the map - so the map is ringed with
+	# fully transparent cells and the band that gets dropped is empty.
+	var floor_pad: int = _pad_for_overhang(floors,
+		int(ceil(float(SURFACE_CELL.y - ART.y) / float(ART.y))), 0,
+		SURFACE_COORDS["blank"])
+	print("floor cells: %d (+%d transparent, to keep the edges out of the clipped band)"
+		% [floor_cells, floor_pad])
 	root.add_child(floors)
 	floors.owner = root
 
@@ -1069,20 +1039,6 @@ func _build_scene(tileset: TileSet, floor_tileset: TileSet) -> void:
 	root.add_child(decals)
 	decals.owner = root
 
-	var kerbs := TileMapLayer.new()
-	kerbs.name = "Kerbs"
-	kerbs.tile_set = floor_tileset
-	kerbs.z_index = KERB_Z          # above the floor, below anything that walks
-	kerbs.navigation_enabled = false
-	var kerb_cells: int = _paint_kerbs(kerbs)
-	var kerb_pad: int = _pad_for_overhang(kerbs,
-		int(ceil(float(KERB_CELL.y - ART.y) / float(ART.y))), 0, FLOOR_COORDS["blank"])
-	print("kerb cells: %d (+%d transparent, to keep the lip out of the clipped band)"
-		% [kerb_cells, kerb_pad])
-	kerbs.position = floors.position      # same grid as the floor, same origin
-	root.add_child(kerbs)
-	kerbs.owner = root
-
 	var walls := Node2D.new()
 	walls.name = "Walls"
 	root.add_child(walls)
@@ -1102,7 +1058,7 @@ func _build_scene(tileset: TileSet, floor_tileset: TileSet) -> void:
 	root.add_child(props)
 	props.owner = root
 	print("thin walls: ", _spawn_wall_runs(props, nav, blocks, root))
-	var editable := {"Blocks": blocks, "Kerbs": kerbs, "Floor": floors, "Decals": decals}
+	var editable := {"Blocks": blocks, "Floor": floors, "Decals": decals}
 	if _capturing:
 		_capture_hand_edits(editable)
 		quit()

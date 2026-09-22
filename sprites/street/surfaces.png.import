@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://gh8tbc888eeu"
-path="res://.godot/imported/kerbs.png-eda8c8f450705552a9d01ce419022e13.ctex"
+uid="uid://qxnrm2jpkwhe"
+path="res://.godot/imported/surfaces.png-1cd9ee998167eb244edfca0187188e00.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://sprites/street/kerbs.png"
-dest_files=["res://.godot/imported/kerbs.png-eda8c8f450705552a9d01ce419022e13.ctex"]
+source_file="res://sprites/street/surfaces.png"
+dest_files=["res://.godot/imported/surfaces.png-1cd9ee998167eb244edfca0187188e00.ctex"]
 
 [params]
 

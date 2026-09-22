@@ -10,13 +10,12 @@ and the anchor and nothing else has to change.
 
 ---
 
-## The four that matter
+## The three that matter
 
 | Sheet | Cell | Count | What it is |
 |---|---|---|---|
-| `floors.png` | **64×32** | 17 tones (+blank) | the ground: flat diamonds, no pattern |
-| `kerbs.png` | **64×48** | 33 (+15 spare) | a pavement tile whose edge hangs |
-| `walls.png` | **64×122** | 38 | one storey of a building face |
+| `surfaces.png` | **64×64** | 86 | the ground: floors AND kerbs, every tone at every height |
+| `walls.png` | **64×122** | 40 | one storey of a building face |
 | `props/*.png` | any size | 14 | free-standing objects |
 
 Plus two supporting sheets: `decals.png` (16×8 litter overlays) and
@@ -37,79 +36,128 @@ is. Three rules, and the fine grid has to pass them too:
 
 **A diamond drawn as a polygon does not tile.** Its edges are whatever the
 rasteriser decides. The exact shape is fixed by area: one lattice cell is
-`W·H/2` pixels, so a tile must cover precisely that — rows of 2, 6, 10 … W−2
-and back down. `iso_mask()` builds it; `close_to_mask()` then fills anything
+`W·H/2` pixels, so a tile must cover precisely that — rows of 4, 8, 12 … W and
+back down to 4, which is H−1 rows. `iso_mask()` builds it; `close_to_mask()` then fills anything
 the painter left short, because masking multiplies alpha and can only ever
 remove. Measured after: **0 seam pixels** anywhere in the floor.
 
 ---
 
-## floors.png — 64×32, laid out 3 x 6 (192x192, square)
+## surfaces.png — 64×64 cell on a 64×32 tile, laid out 10 x 9 (640x576)
+
+**Floors and kerbs are one list.** A kerb is not a different kind of thing from
+a floor — it is a floor that stands a little proud of what is next to it. They
+used to be two sheets on two layers, which meant every pavement cell carried a
+flat tile *and* an edge tile and the map had to say the same thing twice. Now a
+cell picks `pave_4` or `pave_4_t6` and that is the whole decision.
 
 **Flat diamonds, one tone each, no pattern.** A pattern drawn into a 64x32 tile
 fights the eye at this size and is awkward to repaint; a ramp of tones reads as
-a surface and takes its detail from the decals layer instead. Recolouring a
-surface is then one pixel.
+a surface and takes its detail from the decals layer instead.
 
-Six pavement tones (`pave_1`..`pave_6`, light to dark), six road
-(`road_1`..`road_6`), three dirt, two shade, plus `blank` — a transparent tile
-used to pad layers whose art overhangs. 18 slots is exactly 3 x 6, which at a
-2:1 tile is a **square sheet**.
+17 tones — six pavement (`pave_1`..`pave_6`, light to dark), six road, three
+dirt, two shade — each at **five heights**: flat, and `_t3`, `_t6`, `_t12`,
+`_t24`. Plus `blank`, a transparent tile used to pad the layer where its art
+overhangs. 86 in a 10 x 9 grid.
 
-**The art must not exceed 64x32**: Godot drops tile art that overhangs its
-cell, in a band along the top and left of the whole map, which reads as "the
-floor stops short" rather than as a tiling bug.
+### Anchored to the BOTTOM of the cell
+The base diamond — where the surface meets the ground — is in the **bottom
+32 px** of the cell, and height is drawn **upwards** from there into the spare
+32 px above.
 
-A letter in `GROUND` (in `tools/build_street.gd`) names a **list** of tones and
-which one a cell gets is hashed from its coordinates, so a surface mottles
-slightly instead of being one flat colour.
+That is the only anchoring that works on a single layer. Anchored to the top,
+height hangs *below* the footprint, and the tile in front is drawn after it and
+paints straight over it — measured, **0 visible kerb pixels** anywhere on the
+street. Anchored to the bottom, height rises into the cells *behind*, which are
+drawn earlier, so a raised surface occludes what is behind it and nothing can
+cover its face.
 
-## kerbs.png — 64×48, laid out 6 x 8 (384x384, square)
+It is also the same convention as the wall panels, so there is one rule.
 
-A pavement tile with the drop to the road **hanging below** it: the floor
-diamond in the **top 32 px**, then the lip below it.
+### A face only shows where the neighbour is lower
+Nothing knows where "the kerb" is. Every pavement cell is the same raised tile;
+inside a field of one height, every face is covered by the tile in front of it
+(measured: **0 px** of face visible in the interior, at every height). The face
+appears exactly where the surface meets something lower — along the road, and
+at corners — for free.
 
-**A kerb is two choices — which surface, and how far it drops** — so the sheet
-is that grid rather than a hand-picked list: `<tone>_edge`, `<tone>_edge_low`
-and `<tone>_edge_high` for every floor tone a footway can be made of (the six
-pavement tones, three dirt, two shade). 11 x 3 = **33**, and a new floor tone
-brings its three kerbs with it for free. Road tones are excluded — a road has
-no kerb, it is what the kerb drops *to*.
+> A raised surface only ever shows its **south-west and south-east** faces.
+> That is the projection, not a bug: the far pavement shows its kerb against
+> the road, the near pavement shows its kerb on the side away from it.
 
-The drops are 3 / 6 / 10 px against the reference's 6 px kerb: `_low` is a
-dropped crossing, `_high` a raised footway. A kerb is a lip you step over, not
-a step you climb — at 12 px it reads as the latter, which is why the tall one
-stops at 10.
+### Every edge steps 2 across for 1 down
+Both the surface and its faces come from the same mask: `_extrude()` drags the
+footprint's silhouette downwards, so a face cannot step differently from the
+surface above it. Drawing the faces as polygons instead put their west corner
+one pixel outside the diamond and produced a 2, 2, **3** step in the lower
+edge.
 
-The cell allows a lip of up to **16 px**, more than the tallest drawn here, so
-a taller variation can be painted straight into the spare rows and nothing else
-needs changing. 6 x 8 is exactly square at a 64x48 cell, and the 15 unused
-slots are there to paint into without reshuffling the index.
+**Every step of every edge is 2 across, 1 down — including into the points.**
+That comes from the row widths: `4, 8, 12 … 64, 60 … 4`, which has a single
+widest row and puts real one-row points at x=0 and x=63.
 
-Keep the diamond in the top 32 px wherever the lip ends: the tile is anchored
-on its footprint, not on the art, so a taller lip grows downward over the road
-rather than lifting the pavement. And keep the cell height **even** — the
-anchor is `-(cell_h - 32) / 2`, and an odd cell puts the footprint on half a
-pixel.
+The obvious `2, 6 … 62, 62 … 6, 2` has the same area and also tiles, but its
+widest row appears twice, so the extremes are a 2x2 stub that stops at x=1.
+Flat that is invisible; raised it becomes a two-column vertical bar at every
+point, and consecutive kerb faces stop two columns short of each other.
 
-Not a raised block — a raised block hides its own faces, because the next tile
-along the run covers them.
+If you repaint these by hand the one rule that matters is **2 px across for
+every 1 px down**, on the surface edge and the face edge alike, with no step
+of 1 or 3 anywhere. Verified by listing the first opaque pixel of every row of
+every tile: steps of only 0 and 2, across all 85 tiles.
 
-One of these goes on **every pavement cell**, not just the row beside the road.
-Where the neighbour is more pavement its top covers the hanging face, so the
-footway reads as continuous; where the neighbour is road, that is a floor tile
-on the layer below and cannot cover anything, so the lip shows. Corners come
-out right without being special-cased.
+You have more freedom than the generator takes. Nothing stops a painted tile
+from filling columns 0 and 63 — it just must not leave a gap, and the tile in
+front will draw over anything extra.
 
-The surface is exactly the matching floor tone, so the footway is seamless
-against the plain floor beside it.
+### Limits
+- **Height ceiling is 32 px** — the spare cell above the base. Higher needs a
+  taller cell, not a taller drawing: art that overhangs its cell is dropped by
+  Godot in a band along the top and left of the whole map.
+- **Keep the cell height even.** The anchor is `+(cell_h - 32) / 2`, and an odd
+  cell puts the base on half a pixel.
+- **A character on a raised surface is drawn `t` px into it.** Navigation is a
+  single flat plane, so a character's feet sit on the *base*, while the surface
+  is drawn `t` px higher. At the 6 px kerb this is invisible. Much above ~8 px
+  and placement would have to be lifted to match, which nothing does yet — so
+  treat `_t12` and `_t24` as scenery to walk *past*, not to stand on.
 
-## walls.png — 64×122
+A letter in `GROUND` (in `tools/build_street.gd`) names a **list** of surfaces
+and which one a cell gets is hashed from its coordinates, so a surface mottles
+slightly instead of being one flat colour. Height lives in the name, so the
+pavement letters carry the kerb and there is no second map to keep in step.
 
-One **storey** of one **face**, one bay wide. The base line runs corner to
-corner across the 64 px width, rising 32 px for the `_r` facing and falling
-32 px for the `_l` facing. Above that is 88 px of storey, plus margin.
+## walls.png — 64×122, laid out 4 pairs x 5 rows (512x610)
 
+One **storey** of one **face**, one bay wide. The base runs corner to corner
+across the 64 px width, rising 32 px for the `_r` facing and falling 32 px for
+`_l`. Above that is 88 px of storey, plus margin.
+
+### Every edge steps 2 across for 1 down
+The base climbs `PANEL_RISE` (32) across `PANEL_W` (64) — exactly 2:1 — and the
+silhouette is built **column by column** from that rule, not drawn as a
+polygon. A polygon's slanted edges are whatever the rasteriser decides, which
+is what stopped the floor diamond tiling, and on a wall it showed as a base
+stepping 2, 2, 3.
+
+**Everything drawn on top is then clipped to that silhouette**, so no amount of
+brickwork, window frame or string course can push a pixel past the outline. The
+features are free to be sloppy at the edges; the outline is not.
+
+**The first and last columns are single-column runs; everything between is
+two.** That is what lets panels join: panel A's last column and panel B's first
+are both half-steps at the same height, so together they make the two-wide run
+the staircase wants.
+
+Verified across all 40 segments: silhouette steps of only 0 and 1, every column
+exactly 88 px tall, every panel rising exactly 32 over 64 columns — and on a
+run of four panels, every interior run exactly 2 columns with only the two ends
+of the whole wall as half-steps.
+
+If you repaint these, that is the rule to keep, ends included — a two-column
+run at the end of a panel makes a three-column step where it meets the next one.
+
+### The rest of the contract
 **A bay is two cells, not one.** A cell's wall face is only `TILE_W/2` = 32 px
 across — too narrow to hold a 36 px door, which is why doors kept coming out
 shorter than the Doctor while they were pegged to the tile. A panel is one
@@ -128,19 +176,18 @@ something you look over rather than up at. A door is 36 x 66 px.
 but the two faces catch different light, so a flipped `_r` does not read as an
 `_l`. Every name exists twice, `<name>_l` and `<name>_r`.
 
-Brick throughout, with a **stone surround** to the windows and a wooden door —
-the same treatment as the old block art. Ground-floor layouts are prefixed
-`g_`; `g_stone` is the one stone frontage. A brick is a quarter of a bay wide
-and `REF["course"]` tall, so it matches masonry anywhere else.
+Brick throughout, with a **stone surround** to the windows and a wooden door. A
+brick is a quarter of a bay wide and `REF["course"]` tall, so it matches masonry
+anywhere else. Panels stack sideways into runs and upwards into storeys, so the
+left and right edges must tile and the top must meet the bottom.
 
-Panels stack sideways into runs and upwards into storeys, so the left and right
-edges must tile and the top must meet the bottom.
+**The entry count is a multiple of the 4 pairs per row on purpose**, so the last
+row is full — a ragged final row wastes sheet and reads as a mistake.
 
-21 layouts x 2 facings = 42 panels: `plain`, `plain_b`, `windows`,
-`window_plain`, `plain_window`, `window_lit`, `window_out`, `window_pipe`,
-`poster`, `sign`, `vent`, `pipe`, `quoin`, and the ground-floor `g_plain`,
-`g_door`, `g_door_win`, `g_windows`, `g_shop`, `g_shopdoor`, `g_door_pipe`,
-`g_stone`.
+19 layouts + `quoin` = 20 entries x 2 facings = **40 segments**: `plain`,
+`plain_b`, `window`, `window_b`, `window_lit`, `window_out`, `pipe`, `poster`,
+`sign`, `vent`, and the ground-floor `g_plain`, `g_door`, `g_window`, `g_shop`,
+`g_shopdoor`, `g_pipe`, `g_stone`, `g_stone_door`, `g_window_lit`.
 
 ## props/*.png — any size
 

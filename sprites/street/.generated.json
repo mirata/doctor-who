@@ -1,7 +1,5 @@
 {
- "sprites/street/decals.png": "0159af0cae650c43e211822f2eec7fcffe16fd25c5fc92f13878861ba13d4025",
- "sprites/street/floors.png": "962dabc3d5df178113ab5e3e37be54ec33cf9c49f1a9763293f0537a38affc8f",
- "sprites/street/kerbs.png": "7f99c76e091e0db5010f423832cd4c8ac259334dc0019fa2089dda61ffe857f6",
+ "sprites/street/decals.png": "d0be75be131b31419ca69c67dc3849318b79d4be8c5498b13d9ce6f0d30b08e2",
  "sprites/street/palette.png": "a3e650546e603a582837953a473d71e0f3bef7af1f6aaee81d3373c206ec0761",
  "sprites/street/props/barrel_left.png": "91620569557cf1000414c64ed479450eda0a0dc7c90ad9047efa9b2f341b2c0e",
  "sprites/street/props/barrel_right.png": "70668eace8085edd279dd51761aa74e794a23f5fb8649578c485e8d3e6156082",
@@ -17,6 +15,8 @@
  "sprites/street/props/trash_can_rusty.png": "aa568e6988992d20a3c02374d863b611d8786807b7bbd095e81671615d045020",
  "sprites/street/props/trash_skip.png": "d3c4214a838363656fa4465259cca5eb74b58c8a0aaeadd391913bfcf63e2217",
  "sprites/street/props/wall_lamp.png": "95487def40a95e8aa306c1217b95ee36787d156a513c7072468b73ba7c71c07b",
+ "sprites/street/surfaces.png": "3f36f697578d17ec32f8e58a3e682ee6e6345671b95eb93dabac0dcf34c785aa",
  "sprites/street/thin_walls.png": "150ebcd997dcbb546522c7a6935bc5904e19ea2f7664298830fd29b39a23eb12",
- "sprites/street/tile_template.png": "16ba224a98736a2dc006452c88cee14370cc302555bb44f2a0d52debb38ddd7c"
+ "sprites/street/tile_template.png": "16ba224a98736a2dc006452c88cee14370cc302555bb44f2a0d52debb38ddd7c",
+ "sprites/street/walls.png": "04fd6068ee1a68508ed51f71333d9ec1b53415eb8a3d48e3c7a3e5267a645f83"
 }

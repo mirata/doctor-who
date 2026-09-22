@@ -38,9 +38,8 @@ cancels the current click destination.
 | `scene_door.gd` | `Area2D` that fades to `target_scene` when a body enters |
 | `levels/street_tileset.tres` | The street `TileSet`: collision + navigation per tile |
 | `sprites/street/ASSETS.md` | **What to paint** — every sheet, its cell size and anchor |
-| `sprites/street/floors.png` | 64x32 floor diamonds, 17 flat tones |
-| `sprites/street/kerbs.png` | 64x48 kerbs — 11 tones x 3 lip heights |
-| `sprites/street/walls.png` | 64x122 wall panels, one storey of one face. **Hand-painted — not regenerated** |
+| `sprites/street/surfaces.png` | The ground — floors **and** kerbs, 17 tones x 5 heights |
+| `sprites/street/walls.png` | 64x122 wall panels — flat, one storey of one face |
 | `sprites/street/props/` | free-standing objects, sized by their own artwork |
 | `sprites/street/TILESET.md` | Measurements and the original grid analysis |
 | `nerva.tscn` | Superseded by the street; kept but no longer linked |
@@ -373,7 +372,7 @@ practical points:
 - **Godot drops tile art that overhangs its cell**, in a band along the top and
   left of the *whole map*. It reads as "the floor stops short" rather than as a
   clipping bug, so a sheet whose art exceeds its cell is a trap. Layers whose
-  art legitimately hangs (the kerbs) are padded with a transparent `blank`
+  art rises above its cell (every raised surface) are padded with a `blank`
   tile — see `_pad_for_overhang()`.
 - `tools/make_tiles.py` generates every sheet **and `tiles.json`**, which is the
   single source of truth for tile names, atlas coordinates and whether each is
@@ -401,17 +400,19 @@ the next run reads its own output as hand-painting and refuses to touch it —
 the guard latching onto everything it makes. That was a real bug: `kerbs.png`
 regenerated once and then went untouchable.
 
-### Floors are flat tones, not patterns
+### Floors are flat tones, and floors and kerbs are one list
 A pattern drawn into a 64x32 tile fights the eye at this size and is awkward to
-repaint. `floors.png` is 17 flat diamonds — six pavement tones, six road, three
-dirt, two shade — plus a transparent `blank`; detail comes from the decals
-layer instead, and recolouring a surface is one pixel. A letter in `GROUND`
-names a **list** of tones and a coordinate hash picks between them, so a
-surface mottles slightly rather than reading as one flat colour.
+repaint. `surfaces.png` is flat diamonds — six pavement tones, six road, three
+dirt, two shade — and detail comes from the decals layer instead, so recolouring
+a surface is one pixel. A letter in `GROUND` names a **list** of tones and a
+coordinate hash picks between them, so a surface mottles slightly rather than
+reading as one flat colour.
 
-Kerbs follow the same rule and are generated as a grid rather than a list:
-`<tone>_edge`, `_edge_low` and `_edge_high` for every tone a footway can be
-made of. A new floor tone brings its three kerbs with it for free.
+**A kerb is a floor that stands proud, not a different kind of thing.** Every
+tone exists at five heights — flat, `_t3`, `_t6`, `_t12`, `_t24` — on one sheet,
+one atlas source and one layer. It used to be two sheets on two layers, which
+meant every pavement cell carried a flat tile *and* an edge tile and the map had
+to say the same thing twice; the pavement letters now just name `pave_4_t6`.
 
 ### Thin walls
 `q_wall_a` / `q_wall_b` (plus `_low`) are quarter-sized brick walls, a quarter
@@ -436,7 +437,7 @@ Two helpers in the build script, and using the wrong one misaligns the art:
 
 | helper | for | anchors on |
 |---|---|---|
-| `_big_to_local()` | blocks, kerbs, props, characters, the door | the centre of a **big** cell |
+| `_big_to_local()` | blocks, props, characters, the door | the centre of a **big** cell |
 | `_quarter_to_local()` | thin walls — anything one fine cell in size | the centre of a **fine** cell |
 
 Both take big-cell coordinates and accept fractions; in `_quarter_to_local` a
@@ -457,28 +458,28 @@ occlusion inverts near anything solid. `_assert_alignment()` now checks both
 helpers against `layer.map_to_local()` on every build and prints loudly.
 
 Verified after the fix: 131 of 131 solid sprites stand on their own collision
-cell (the other 56 are kerbs, deliberately walkable, and free-standing props,
+cell (the other 56 are raised pavement, deliberately walkable, and props,
 which carry their own `StaticBody2D`), 0 walkable cells overlap a solid one, and
 **0 of 5712 frames** walking all eight directions from six spots ended inside
 solid geometry.
 
 ### Wide, flat things cannot be Y-sorted
 **Y-sort judges a sprite by a single point, so it cannot express "wide but
-flat".** A kerb is 96 px of art sorting from its diamond centre, and its lip
-reaches 48 px either side of the y it is judged by — so a character standing on
+flat".** A kerb is a tile's width of art sorting from its diamond centre, and
+its face reaches half that either side of the y it is judged by — so someone on
 the pavement just *north* of that point is legitimately behind the kerb and
 still gets drawn over, with the kerb line cutting across their shins. Measured
 at big (6, 3.7): the kerbs at (6,4) and (7,4) sort 7 px and 31 px below him.
 
-Since a 4 px lip could only ever hide 4 px of a 96 px character, the answer is
+Since a 6 px lip could only ever hide 6 px of a 96 px character, the answer is
 that it should not occlude at all — and a thing that never occludes and never
-sorts is exactly what a **tile** is. Kerbs are a `Kerbs` TileMapLayer at
-`z_index = -50`: above `Ground` (-100) and `Decals` (-99), below everything that
-walks. **`z_index` takes precedence over y-sorting**, so they are out of the
-contest by construction rather than by sorting them more cleverly.
+sorts is exactly what a **tile** is. The kerb is part of the `Floor`
+TileMapLayer at `z_index = -100`, below everything that walks.
+**`z_index` takes precedence over y-sorting**, so it is out of the contest by
+construction rather than by being sorted more cleverly.
 
-That also makes them paintable in the editor, and turns 48 `Sprite2D` nodes
-into one layer.
+That also makes it paintable in the editor, and turns 48 `Sprite2D` nodes into
+part of a layer that had to exist anyway.
 
 Verified across 264 positions along both kerb lines (comparing z first, then y,
 the way the renderer does): kerbs draw over the player **0** times, while
@@ -489,16 +490,25 @@ Use `Props` (Y-sorted) only for things tall enough that hiding a character is
 the right answer. Anything flatter than it is wide belongs on a fixed
 `z_index`, and if it never occludes at all it should be a tile.
 
-#### Tiles taller than a cell need their own atlas source
-`texture_region_size` is per **source**, not per tileset, so one `TileSet` can
-mix cell sizes. Kerb art is 64x48 against a 64x32 grid, so it lives in its own
-source with `texture_origin = (0, -(cell_h - TILE_H) / 2)` — the same offset the
-wall sprites use — which lifts the art so its footprint diamond lands on the
-cell instead of the middle of the region.
+#### A tile can be taller than its cell
+`texture_region_size` is per **source**, not per tileset, so a `TileSet` can mix
+cell sizes — but the ground does not need to. The surface sheet is one source
+with a 64x64 region on a 64x32 tile: the base diamond occupies the bottom half
+and height is drawn into the top half.
 
-That is the general way to make *any* over-tall art into tiles, and it is why
-the kerb sheet can grow a taller lip without the grid changing. Only do it for
-things that must not occlude a character; everything else stays a sprite.
+`texture_origin = (0, +(cell_h - TILE_H) / 2)` pushes the art **down** so that
+base, rather than the middle of the region, lands on the cell.
+
+**The sign is the whole thing, and getting it backwards is silent.** With the
+opposite sign the art is top-anchored: it still tiles perfectly and the floor
+looks completely normal — but every face then hangs *below* its footprint,
+where the tile in front is drawn afterwards and paints over it, so every kerb
+on the level disappears. Measured both ways: +16 puts the base at y -16..+16 of
+the cell with height rising to -40; -16 puts the base at -16..+16 with the face
+hanging to +39 and **0 kerb pixels visible** anywhere.
+
+Measure it rather than reasoning about it — place one tile, render it, and
+compare the opaque bounds against `map_to_local` for that cell.
 
 ### Night is a tint plus lights, and needs both
 `levels/night.gd` on the street's `Night` node. Two halves doing different
@@ -532,9 +542,11 @@ Things worth knowing before retuning it:
   original would ratchet the lamps down to nothing over a few calls. Metadata
   is serialised into the scene, so it survives a save from the editor.
 - **A pool of light on the floor is an ellipse, not a circle.** The ground is a
-  2:1 isometric plane, so each light carries `scale = (1, 0.5)`; a round one
-  reads as a glowing ball hanging in front of the wall. Measured: 156 px across
-  by 79 down, ratio **1.97**.
+  2:1 isometric plane; a round one reads as a glowing ball hanging in front of
+  the wall. It comes from the texture being `2r x r` rather than from scaling
+  the node: `FILL_RADIAL` measures distance in UV space, so a circle in UV is
+  2:1 in pixels on a texture twice as wide as it is tall. Scaling the node
+  `(1, 0.5)` gives the same shape but resamples, which softens the bands.
 - **Lamp pools are derived from the `wall_lamp` props**, not listed twice, so
   moving a lamp moves its light. Lights with no fitting drawn for them — lit
   shop windows, the phone box — go in `NIGHT_LIGHTS`.
@@ -544,10 +556,42 @@ Things worth knowing before retuning it:
 - **The light texture is white**; the warm colour is the light's own `color`.
   Texture sets the shape, `color` sets the hue, so recolouring a lamp does not
   mean redrawing anything.
-- **A linear alpha ramp reads as a flat disc with a rim** — the eye finds the
-  end of a straight ramp. The gradient stops approximate an inverse-square
-  knee instead. No banding at this resolution: measured **119 distinct steps**
-  across a 240 px cut through the brightest pool.
+- **The falloff is banded on purpose.** Everything else on screen is a handful
+  of flat tones, so a continuously fading light reads as modern lighting laid
+  over pixel art. `LIGHT_BANDS` (10) sets how many flat rings it falls off in
+  — 6 is a bullseye, 16 is almost smooth, 10 is stepped and still reads as
+  lamplight. `LIGHT_FALLOFF` (2.0) sets how fast they darken; 1 is linear,
+  which gives a flat disc with a hard rim, because the eye finds the end of a
+  straight ramp.
+- **The band edges are dithered**, by an ordered (Bayer) matrix: the threshold
+  varies in a fixed small pattern, so a hard ring becomes a checker that
+  averages to the same brightness. `dither` (0.4) is how far the edges break
+  up, in bands — 0 is hard rings, 0.8 mostly dissolves them, past ~1.2 it is
+  grain with no rings at all.
+- **`dither_pattern` picks the matrix, and it is a look rather than a quality
+  setting.** `BAYER_4X4` has 16 levels over a 4 px tile, so the stipple is fine
+  and the transition gradual — a VGA sort of look, and the default. `BAYER_2X2`
+  has 4 levels over 2 px, so the dots are coarse and regular and each ring
+  keeps a harder edge — closer to Amiga or EGA. At 640x320 scaled 4x a 2x2 dot
+  is a visible 8 px block on screen, which is the scale this art works at
+  anyway. Both matrices hold every value from 0 to n²−1 exactly once, which is
+  what stops the stipple biasing the result lighter or darker.
+- **Two things are needed before bands land as bands**, and missing either one
+  quietly puts the smooth ramp back:
+  quantising the **radius** rather than the brightness, so the rings stay
+  evenly spaced and only their values follow the falloff; and **building the
+  texture at its final size with `texture_scale = 1`**, because a small texture
+  stretched up to the pool's diameter gets resampled, and resampling a hard
+  edge — or a dither pattern — is precisely how you lose it.
+
+**The pool textures are generated at runtime in `night.gd`, not at build time.**
+Two reasons: `GradientTexture2D` cannot dither, since that needs per-pixel
+control, and an `ImageTexture` baked into the scene serialises as its raw
+pixels — roughly 180 KB a light. Building them in `_ready()` keeps the scene
+file clean and makes `bands`, `falloff`, `dither` and `dither_pattern` live
+knobs in the inspector rather than a rebuild each time. `build_street.gd` only
+records each light's radius as metadata. Measured: **15.2 ms** to build all six,
+once at load and again whenever a knob moves.
 
 Verified: night is 59% of day brightness, the lights brighten 7.5% of the
 frame (peak +184 of 255), and a character standing in a pool has **96% of
@@ -701,7 +745,6 @@ So the street splits the job like this:
 | `Nav` (`TileMapLayer`) | **no** | 16x8 | **navigation** |
 | `Blocks` (`TileMapLayer`) | **no** | 16x8 | **collision** |
 | `Decals` (`TileMapLayer`) | yes, `z −99` | 16x8 | litter and grime |
-| `Kerbs` (`TileMapLayer`) | yes, `z −50` | 64x32 | the kerb lip; never sorts |
 | `Walls` (`Node2D`) | yes | — | facade panels, `IsoSorter` LINE |
 | `Props` (`Node2D`) | yes | — | prop sprites, `IsoSorter` POINT |
 
@@ -823,28 +866,45 @@ So: a missing panel now **prints loudly** and is counted in the build summary
 as `<-- n MISSING ART`, and the lists cannot drift because there is only one
 of them.
 
+#### A panel's silhouette is exact; what is drawn on it is clipped to it
+**The body used to be a rasterised `polygon`**, whose slanted edges are
+whatever PIL decides — the same thing that stopped the floor diamond tiling —
+so the base stepped 2, 2, 3 instead of holding a clean 2:1. It is now filled
+**column by column** from `panel_step(x)`, and everything painted afterwards is
+**clipped to that same silhouette**. Brickwork, window frames and string courses
+can be as loose as they like at the edges; the outline cannot move.
+
+`panel_step` is `(x + 1) // 2`, not `x // 2`. Both step 2 across for 1 down
+through the middle, but this one reaches `PANEL_RISE` exactly at the last
+column instead of finishing one short, and pays for it by making the **first
+and last runs one column wide** rather than two.
+
+**That is what lets panels join.** Panel A's last column and panel B's first
+are both half-steps at the same height, so together they make the two-wide run
+the staircase wants. Measured on a run of four: every interior run exactly 2
+columns, only the two ends of the whole wall are half-steps, 128 px of rise
+over 256 columns. Across all 40 segments: silhouette steps of only 0 and 1,
+every column exactly 88 px tall, every panel rising exactly 32 over 64.
+
+> Clip with `ImageChops.multiply` on the alpha, not `putalpha(mask)`.
+> Replacing the alpha turns every unpainted pixel inside the outline opaque —
+> the same trap the decals hit. Multiplying can only remove, which is all that
+> is wanted, since the body fill has already covered everything inside.
+
 #### Panel variations are composed, not drawn
 A panel is a list of **bay** kinds, so "window + door" is a line in
 `PANEL_LAYOUTS` rather than a new painter. Bays live in `BAYS` and each one
-paints inside a `u` range. 20 layouts x 2 facings = 40 segments from about a
-dozen small painters, and adding "boarded window next to a vent" costs one
-line.
+paints inside a `u` range. 19 layouts plus the quoin, x 2 facings = 40 segments
+from about a dozen small painters, and adding "boarded window next to a vent"
+costs one line.
 
-Ground-floor layouts are prefixed `g_` and drawn in stone; upper storeys are
-brick. A string course caps every panel, which is what makes storeys stack
-without a visible join.
+**Keep the entry count a multiple of `PAIRS_PER_ROW`** so the sheet's last row
+is full. Ground-floor layouts are prefixed `g_` and drawn in stone where the
+frontage calls for it; upper storeys are brick. A string course caps every
+panel, which is what makes storeys stack without a visible join.
 
 Both facings are **separate artwork**. They are mirror images geometrically,
 but the two faces catch different light, so a flipped panel reads wrong.
-
-**The two facings slope opposite ways, and everything derived from the base has
-to follow the artwork.** An `r` base starts low at the south vertex and rises to
-the east vertex; an `l` base starts high at the west vertex and falls to the
-south vertex. `_panel_base()` returning one shape for both put the sort line
-across the grain of the picture *and* hung every `l` panel half its rise off the
-ground — the walls floated, with a black gap along their feet. Checked on every
-build: `41 of 41` panel bases land on the cell vertex they claim, sloping the
-way their facing does.
 
 #### Inside corners slice a character in half
 A walkable cell whose **south-east neighbour is a building** sits behind that
@@ -1026,41 +1086,112 @@ measure near the edge of a laid patch and the area outside it counts as holes
 and the test lies to you in both directions.
 
 **A diamond drawn as a polygon does not tile.** The shape is fixed by area: one
-lattice cell is `W*H/2` pixels, so the tile must cover exactly that — rows of
-2, 6, 10 ... W-2 and back. Rows of 4, 8, 12 ... look right and are 6% too big,
-which overlaps rather than gapping and is harder to spot.
+lattice cell is `W*H/2` pixels, so the tile must cover exactly that. Two row
+sequences hit it, and they are not equally good:
+
+| rows | height | edge steps | points |
+|---|---|---|---|
+| `2, 6, 10 … W-2, W-2 … 6, 2` | H | 2, with a **0** at the middle | a 2x2 stub at `x=1`, never reaching the edge |
+| `4, 8, 12 … W, W-4 … 4` | **H-1** | **2, everywhere** | single-row points at `x=0` and `x=W-1` |
+
+Both are exactly `W*H/2` and both lay on the lattice at 0 gaps and 0 overlaps.
+**The second is the one to use.** Its widest row appears once rather than
+twice, so there is no 0-across step interrupting the staircase, and its points
+reach the edge of the cell.
+
+Flat, the difference is invisible — neighbours interlock through the stub.
+Raised, it shows twice over: the stub becomes a two-column vertical bar at
+every east and west vertex, and because the shape stops at `x=1`, consecutive
+raised faces stop two columns short of each other and the ground behind shows
+through the gap. Both faults disappear with the uniform sequence, and nothing
+about the tiling is traded away to get it.
+
+> Do not "fix" the stub by widening the FACE to `x=0`/`x=W-1`. It bridges the
+> gap and makes the bar **three** columns instead of two, and it patches the
+> wrong layer. Nor by adding a full-width row to the stub shape: that gives
+> real points but makes the tile overlap its neighbours. The row sequence is
+> the thing to change.
+
+> Rows of 4, 8, 12 ... **all the way up and back down symmetrically** are 6%
+> too big, which overlaps rather than gapping and is harder to spot. The
+> working sequence is asymmetric: H/2 rows up, H/2-1 back down.
+
+**Nor do the side FACES, for the same reason.** They were drawn as polygons
+from three guessed vertices, and every guess was wrong in a way the surface
+was not: the west vertex sat at `x = 0` when the mask only ever reaches `x = 1`,
+so each face came out a pixel wider than the surface it belonged to, and the
+rasteriser's own lower edge stepped **2, 2, 3** instead of a clean 2:1.
+
+`_extrude()` drags the mask's bottom silhouette downwards instead. The face
+then inherits the staircase exactly and cannot disagree with the surface,
+because there are no vertices left to get wrong. Verified across the whole
+sheet: **6800 row-to-row steps, 85 tiles, every step 0 or 2**.
+
+**And the mask's own row widths matter as much as the extrusion.** The obvious
+sequence leaves a 0-across step at the east and west extremes, which the
+extrusion turns into a two-column vertical bar at every point; see the table
+under *A legal tile size* above. `iso_mask` uses the uniform sequence, so every
+step of every edge — surface and face alike — is 2 across, 1 down.
+
+Verified after: **0 and 2 are the only step sizes** across all 85 tiles, 0
+transparent pixels in a composed flat field, a raised field pixel-identical to
+a flat one, and 0 ground pixels enclosed by face along a kerb run.
+
+> Check the edges numerically rather than by eye. A 3 px jog in one row of one
+> tile is invisible in a screenshot of a street and obvious the moment you list
+> the left-hand pixel of every row. But measure the COMPOSITE for seams — a
+> per-tile metric calls the deliberate widening a fault, and a naive gap
+> detector calls the V where two faces meet a notch. Both are false alarms I
+> raised on the way.
 
 `close_to_mask()` then fills anything the painter left short, because masking
 multiplies alpha and can only ever **remove**: a pixel the polygon missed at
 the two-pixel tip stays transparent however good the mask is. Floors only —
 a decal is meant to be holes. Measured: **0 seam pixels** in the floor.
 
-### A kerb is an edge, not an object
-A kerb is **not a thing standing on the pavement** — it is where the pavement
-stops. Modelled as a raised block it fails twice over:
+### A kerb is a floor that stands proud
+A kerb is **not a thing standing on the pavement** — it is the pavement, which
+happens to be higher than the road. So it is not a separate sheet, a separate
+layer or a separate map: every tone in `surfaces.png` exists at five heights,
+and a pavement cell simply names `pave_4_t6`.
 
-- **A run of raised tiles hides its own faces.** The face is drawn above the
-  footprint edge, so the next tile along covers it with its raised top. Only
-  the last tile in a run keeps a lip, which is why ours read as a flat band
-  with a shadow at one end.
-- Raising only the kerb row puts a step **up** from the pavement onto it and
-  another down to the road, when the pavement surface should simply *be* the
-  kerb top.
+The whole mechanism is **draw order plus bottom anchoring**:
 
-So every pavement cell is an edge tile, and the drop **hangs below** the
-footprint rather than standing above it. The draw order then does the work:
-
-| the neighbour is | what happens |
+| the neighbour in front is | what happens |
 |---|---|
-| more pavement | its top sits exactly over the hanging face and hides it — a continuous footway |
-| the road | it is a FLOOR tile on the layer below, so it cannot cover anything and the drop shows |
+| the same height | its top face covers this tile's face exactly — a continuous footway |
+| lower, or absent | nothing covers the face, and it shows |
 
-Nothing has to know which cells are "the kerb row". The lip appears wherever
-the pavement meets something lower, including at corners, for free.
+Nothing has to know which cells are "the kerb row". The face appears wherever
+the surface meets something lower, including at corners, for free. Measured: a
+solid field of raised tiles is **pixel-identical to a flat one** at every
+height (0 px of face visible in the interior), while the road boundary shows a
+clean lip.
 
-The tile is the floor art with the faces composited under it, so the footway
-is the same flagstone as the rest and there is no seam where the edge tiles
-start. Keep `TILE_H + kerb` **even**, or the footprint lands on half a pixel.
+Two things that were believed and are not true, both worth not re-deriving:
+
+- **"A run of raised tiles hides its own faces."** It does not. The tile in
+  front covers each face completely, at any height the cell can hold — the
+  plane in front of a tile is fully tiled, so there is no depth at which the
+  covering runs out. This was the stated reason for hanging the drop *below*
+  the footprint instead; the real reason that worked was that the kerbs were on
+  their own layer above the floor, so the road could never paint over them.
+- **Hanging the drop below is fine — until the layers merge.** On one layer the
+  road is drawn after the pavement and covers the lip like any other neighbour,
+  and the kerb vanishes completely with nothing to indicate why.
+
+> A raised surface only ever shows its **south-west and south-east** faces.
+> That is the projection, not a bug: the far pavement shows its kerb against
+> the road, the near pavement shows its on the side facing away from it.
+
+**A character on a raised surface is drawn `t` px into it.** Navigation is a
+single flat plane — `set_destination` and collision know nothing about height —
+so feet sit on the *base* while the surface is drawn `t` px higher. At the 6 px
+kerb that is invisible. Much above ~8 px and placement would have to be lifted
+to match, which nothing does, so treat `_t12` and `_t24` as scenery to walk
+past rather than to stand on.
+
+Keep `TILE_H + height` **even**, or the base lands on half a pixel.
 
 ### Architecture is measured in metres, not tiles
 `REF` is sized against the **character**: 71 px of Doctor is 1.8 m, so ~39 px
